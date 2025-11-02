@@ -1,0 +1,148 @@
+
+
+.env/
+venv/
+
+__pycache__/
+*.pyc
+.DS_Store
+
+// ...existing code...
+.env/
+env/
+venv/
+.venv/
+
+__pycache__/
+*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+
+.DS_Store
+Thumbs.db
+
+# Python packaging / build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Virtual environments
+.env/
+venv/
+.venv/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs, databases, caches, coverage
+*.log
+*.sqlite3
+*.db
+*.sqlite
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.cache/
+
+# Django / Flask / local settings
+local_settings.py
+instance/
+migrations/__pycache__/
+celerybeat-schedule
+
+# Environment files
+.env
+.env.*
+*.env.local
+
+# Temp / swap / backup
+*.swp
+*.swo
+*~
+*.bak
+tmp/
+temp/
+
+# Node (if present)
+node_modules/
+
+# Other
+*.pem
+*.key
+```// filepath: c:\Users\naura\Desktop\MultiProduct\MultiProduct\Backend\.gitignore
+// ...existing code...
+.env/
+env/
+venv/
+.venv/
+
+__pycache__/
+*.pyc
+*.py[cod]
+*.pyo
+*.pyd
+
+.DS_Store
+Thumbs.db
+
+# Python packaging / build artifacts
+build/
+dist/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Virtual environments
+.env/
+venv/
+.venv/
+
+# Editor / IDE
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs, databases, caches, coverage
+*.log
+*.sqlite3
+*.db
+*.sqlite
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.cache/
+
+# Django / Flask / local settings
+local_settings.py
+instance/
+migrations/__pycache__/
+celerybeat-schedule
+
+# Environment files
+.env
+.env.*
+*.env.local
+
+# Temp / swap / backup
+*.swp
+*.swo
+*~
+*.bak
+tmp/
+temp/
+
+# Node (if present)
+node_modules/
+
+# Other
+*.pem
+*.key
