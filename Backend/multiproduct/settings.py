@@ -178,9 +178,9 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 
-# STATIC_ROOT = os.environ.get('STATIC_ROOT', BASE_DIR / 'staticfiles')
-# MEDIA_URL = os.environ.get('MEDIA_URL', '/media/')
-# MEDIA_ROOT = os.environ.get('MEDIA_ROOT', BASE_DIR / 'media')
+STATIC_ROOT = os.environ.get('STATIC_ROOT', BASE_DIR / 'staticfiles')
+MEDIA_URL = os.environ.get('MEDIA_URL', '/media/')
+MEDIA_ROOT = os.environ.get('MEDIA_ROOT', BASE_DIR / 'media')
 
 
 # Default primary key field type
