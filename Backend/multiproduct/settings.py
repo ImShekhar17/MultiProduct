@@ -64,7 +64,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-     'corsheaders.middleware.CorsMiddleware',  # added for CORS (should be high priority)
+    'corsheaders.middleware.CorsMiddleware',  # added for CORS (should be high priority)
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -233,3 +233,5 @@ if not CORS_ALLOW_ALL_ORIGINS:
 CORS_ALLOW_CREDENTIALS = os.environ.get('CORS_ALLOW_CREDENTIALS', 'True') in ('True', 'true', '1')
 # Optional: allow common headers
 CORS_ALLOW_HEADERS = list(os.environ.get('CORS_ALLOW_HEADERS', 'content-type,authorization,x-csrftoken').split(','))
+
+
