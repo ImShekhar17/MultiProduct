@@ -9,11 +9,20 @@ https://docs.djangoproject.com/en/5.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
-
+import os
 from pathlib import Path
+from django.core.management.utils import get_random_secret_key
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from a .env file if it exists
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / '.env')
+except Exception:
+    pass
 
 
 # Quick-start development settings - unsuitable for production
@@ -28,6 +37,18 @@ DEBUG = True
 ALLOWED_HOSTS = []
 
 
+
+#used it for environment-based configuration
+
+# SECRET_KEY = os.environ.get('SECRET_KEY', get_random_secret_key())
+
+# # SECURITY WARNING: don't run with debug turned on in production!
+# DEBUG = os.environ.get('DEBUG', 'True') in ('True', 'true', '1')
+
+# ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+
+
+
 # Application definition
 
 INSTALLED_APPS = [
@@ -37,11 +58,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'api',
     'rest_framework',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # added for CORS (should be high priority)
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -82,6 +105,41 @@ DATABASES = {
     }
 }
 
+# -- Database: optional dj-database-url parsing for DATABASE_URL env --
+try:
+    import dj_database_url
+    DATABASE_URL = os.environ.get('DATABASE_URL')
+    if DATABASE_URL:
+        DATABASES['default'] = dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+except Exception:
+    pass
+
+
+#Used it for environment-based configuration
+DATABASES = {
+    'default': {
+        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.mysql'),
+        'NAME': os.environ.get('DB_NAME', BASE_DIR / 'db.mysql'),
+        'USER': os.environ.get('DB_USER', ''),
+        'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+        'HOST': os.environ.get('DB_HOST', ''),
+        'PORT': os.environ.get('DB_PORT', ''),
+    }
+}
+
+
+# -- Cache (Redis) --
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache' if os.environ.get('REDIS_URL') else 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': os.environ.get('REDIS_URL', ''),
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        } if os.environ.get('REDIS_URL') else {},
+    }
+}
+
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
@@ -119,7 +177,61 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+
+STATIC_ROOT = os.environ.get('STATIC_ROOT', BASE_DIR / 'staticfiles')
+MEDIA_URL = os.environ.get('MEDIA_URL', '/media/')
+MEDIA_ROOT = os.environ.get('MEDIA_ROOT', BASE_DIR / 'media')
+
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# Redis / Celery configuration
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', REDIS_URL)
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', REDIS_URL)
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+
+# Email configuration
+EMAIL_BACKEND = os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.environ.get('EMAIL_HOST', '')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') in ('True', 'true', '1')
+EMAIL_USE_SSL = os.environ.get('EMAIL_USE_SSL', 'False') in ('True', 'true', '1')
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER or 'multipro@localhost')
+
+
+# Django REST framework configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': int(os.environ.get('API_PAGE_SIZE', 10)),
+}
+
+
+# CORS configuration (django-cors-headers)
+CORS_ALLOW_ALL_ORIGINS = os.environ.get('CORS_ALLOW_ALL_ORIGINS', 'True') in ('True', 'true', '1')
+if not CORS_ALLOW_ALL_ORIGINS:
+    # comma-separated origins in .env, e.g. CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+    CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+
+CORS_ALLOW_CREDENTIALS = os.environ.get('CORS_ALLOW_CREDENTIALS', 'True') in ('True', 'true', '1')
+# Optional: allow common headers
+CORS_ALLOW_HEADERS = list(os.environ.get('CORS_ALLOW_HEADERS', 'content-type,authorization,x-csrftoken').split(','))
+
+
