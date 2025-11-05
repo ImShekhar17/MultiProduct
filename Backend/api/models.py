@@ -94,3 +94,4 @@ class notification(common):
 
    def __str__(self):
       return f"{self.id}-{self.user.username}-{self.title}"
+
