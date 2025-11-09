@@ -10,8 +10,8 @@ class Command(BaseCommand):
         if not User.objects.filter(is_superuser=True).exists():
             User.objects.create_superuser(
                 username=os.getenv('DJANGO_SUPERUSER_USERNAME', 'admin'),
-                email=os.getenv('DJANGO_SUPERUSER_EMAIL', 'naurangilal9675329115@gmail.com'),
-                password=os.getenv('DJANGO_SUPERUSER_PASSWORD', 'admin@123')
+                email=os.getenv('DJANGO_SUPERUSER_EMAIL', 'Shekharsharma17800@gmail.com'),
+                password=os.getenv('DJANGO_SUPERUSER_PASSWORD', 'admin')
             )
             self.stdout.write(self.style.SUCCESS('Superuser created'))
         else:
