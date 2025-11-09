@@ -130,13 +130,14 @@ class VerifyOTPAPIView(APIView):
             session.pop(key, None)
         session.modified = True
 
-        # Send email to the user
-        subject = "Your Account is Verified"
-        message = f"Dear {user.username},\n\nThank you for registering!"
-        from_email = settings.DEFAULT_FROM_EMAIL
-        recipient_list = [user.email]
+        # # Send email to the user
+        # subject = "Your Account is Verified"
+        # message = f"Dear {user.username},\n\nThank you for registering!"
+        # from_email = settings.DEFAULT_FROM_EMAIL
+        # recipient_list = [user.email]
 
-        send_mail(subject, message, from_email, recipient_list)
+        # send_mail(subject, message, from_email, recipient_list)
+        send_welcome_email(user.email, user.first_name)
 
         return Response({
             "message": "OTP verified. Signup complete.",
@@ -248,7 +249,7 @@ class LoginAPIView(APIView):
 
                 "id": user.id,
                 "email": user.email,
-                "mobile_number": user.mobile_number,
+                "phone_number": user.phone_number,
                 "username": user.username
             },
             "token": access_token,

@@ -10,7 +10,7 @@ def update_translations_for_model(translated_text_id, source_lang):
 def send_email_otp(email, otp):
     from django.core.mail import send_mail
 
-    subject = "Your One-Time Password (OTP) - [Bank Name]"
+    subject = "Your One-Time Password (OTP) - SBI BANK"
     
     message = f"""
 Dear Customer,
@@ -29,16 +29,56 @@ Thank you for banking with us.
 
 Best regards,
 Admin Team
-[Bank Name]
-Email: support@[bankname].com
+SBI BANK
+Email: support@sbi.com
 Phone: +91-XXXXXXXXXX
-Website: www.[bankname].com
+Website: www.sbi.com
 
 ---
 This email and its contents are confidential and intended solely for the recipient. 
 If you received this email in error, please delete it immediately and notify us.
 """
     
-    from_email = "no-reply@[bankname].com"
+    from_email = "no-reply@sbi.com"
     recipient_list = [email]
     send_mail(subject, message, from_email, recipient_list)
+
+
+@shared_task
+def send_welcome_email(email, first_name):
+    from django.core.mail import send_mail
+
+    subject = "Welcome to SBI Bank - Your Account is Ready"
+    
+    message = f"""
+Dear {first_name},
+
+Welcome to SBI Bank! We are delighted to have you on board. 
+Your account has been successfully registered, and you can now enjoy our secure and convenient banking services.
+
+Here are some important details for you to get started:
+
+- Customer Support: +91-XXXXXXXXXX
+- Email Support: support@sbi.com
+- Website: www.sbi.com
+
+We recommend you keep your login credentials secure and never share them with anyone. 
+For your safety, always verify the authenticity of emails and communications claiming to be from SBI Bank.
+
+Thank you for choosing SBI Bank. We look forward to serving your financial needs.
+
+Best regards,
+Admin Team
+SBI Bank
+Email: support@sbi.com
+Phone: +91-XXXXXXXXXX
+Website: www.sbi.com
+
+---
+This email and its contents are confidential and intended solely for the recipient. 
+If you received this email in error, please delete it immediately and notify us.
+"""
+    
+    from_email = "no-reply@sbi.com"
+    recipient_list = [email]
+    send_mail(subject, message, from_email, recipient_list)    

@@ -1,8 +1,11 @@
 
 FROM python:3.11-alpine
 
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+# ENV PYTHONDONTWRITEBYTECODE 1
+# ENV PYTHONUNBUFFERED 1
+ENV DEBUG=True
+ENV ENVIRONMENT=production
+
 
 WORKDIR /usr/src/app
 
@@ -24,7 +27,7 @@ RUN pip install --upgrade pip \
 
 COPY . .
 
-RUN chmod +x wait-for-redis.sh
+# RUN chmod +x wait-for-redis.sh
 
 EXPOSE 8000
 
