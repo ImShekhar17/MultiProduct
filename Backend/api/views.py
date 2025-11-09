@@ -1,32 +1,39 @@
 from django.shortcuts import render
+from django.contrib.auth import get_user_model
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import AllowAny,IsAuthenticated
-from rst_framework.pagination import PageNumberPagination,LimitOffPagination
+from rest_framework.pagination import PageNumberPagination,LimitOffsetPagination
 from django.utils import timezone
 from django.core.mail import send_mail
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
 import random
 from datetime import timedelta
+from api.tasks.send_mail_otp import *
 
 #------
 from rest_framework import viewsets
 from rest_framework.decorators import action
-from .models import TranslatedText
-from .services import process_text_with_translation
-from .serializers import TranslatedTextSerializer
-
+from api.services import translate
 #-----
-from .models import *
-from .serializers import *
+from api.models import *
+from api.serializers import *
+
+User = get_user_model()
+
+
+
 
 # Create your views here.
 
 
 
 class SignupAPIView(APIView):
+    
+    permission_classes = [AllowAny]
+    
     def post(self, request):
         session = request.session
         email = request.data.get("email")
@@ -81,6 +88,7 @@ class SignupAPIView(APIView):
 
 
 class VerifyOTPAPIView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         session = request.session
         otp_input = request.data.get("otp")
@@ -113,11 +121,9 @@ class VerifyOTPAPIView(APIView):
         if timezone.now() > otp_expiry:
             return Response({"error": "OTP has expired. Request a new OTP."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Activate user and generate application ID
+        # Activate user
         user.is_active = True
-        if not user.application_id:
-            user.application_id = user.generate_application_id()
-        user.save(update_fields=["is_active", "application_id"])
+        user.save(update_fields=["is_active"])
 
         # Clear session data
         for key in ["otp", "otp_expires_at", "email"]:
@@ -125,16 +131,16 @@ class VerifyOTPAPIView(APIView):
         session.modified = True
 
         # Send email to the user
-        subject = "Your Application ID"
-        message = f"Dear {user.name},\n\nYour application ID is: {user.application_id}.\n\nThank you for registering!"
+        subject = "Your Account is Verified"
+        message = f"Dear {user.username},\n\nThank you for registering!"
         from_email = settings.DEFAULT_FROM_EMAIL
         recipient_list = [user.email]
 
         send_mail(subject, message, from_email, recipient_list)
 
         return Response({
-            "message": "OTP verified. Signup complete. Application ID has been sent to your email.",
-            "application_id": user.application_id
+            "message": "OTP verified. Signup complete.",
+            "Username": user.username
         }, status=status.HTTP_200_OK)
 
 class ResendOTPAPIView(APIView):
@@ -178,7 +184,6 @@ class ResendOTPAPIView(APIView):
 
         return Response({"message": "New OTP sent to your email."}, status=status.HTTP_200_OK)
 
-
 class LoginAPIView(APIView):
     """ API to authenticate users using multiple login methods """
     permission_classes = [AllowAny]
@@ -186,7 +191,6 @@ class LoginAPIView(APIView):
     def post(self, request):
         email = request.data.get("email")
         mobile_number = request.data.get("mobile_number")
-        application_id = request.data.get("application_id")
         password = request.data.get("password")
         otp = request.data.get("otp")
 
@@ -222,36 +226,12 @@ class LoginAPIView(APIView):
 
             return self.generate_login_response(user)
 
-        # Case 3: Login with Application ID & Password
-        elif application_id and password:
-            try:
-                user = User.objects.get(application_id=application_id)
-            except User.DoesNotExist:
-                return Response({"error": "User with this application ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
-
-            if not user.is_active:
-                return Response({"error": "User account is inactive. Verify OTP first."}, status=status.HTTP_403_FORBIDDEN)
-
-            if not user.check_password(password):
-                return Response({"error": "Invalid password."}, status=status.HTTP_400_BAD_REQUEST)
-
-            return self.generate_login_response(user)
-
         # Case 4: Login with Email & OTP
         elif email and otp:
             try:
                 user = User.objects.get(email=email)
             except User.DoesNotExist:
                 return Response({"error": "User with this email does not exist."}, status=status.HTTP_400_BAD_REQUEST)
-
-            return self.verify_otp_login(session, user, otp)
-
-        # Case 5: Login with Application ID & OTP
-        elif application_id and otp:
-            try:
-                user = User.objects.get(application_id=application_id)
-            except User.DoesNotExist:
-                return Response({"error": "User with this application ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
 
             return self.verify_otp_login(session, user, otp)
 
@@ -269,8 +249,7 @@ class LoginAPIView(APIView):
                 "id": user.id,
                 "email": user.email,
                 "mobile_number": user.mobile_number,
-                "application_id": user.application_id,
-                "name": user.name
+                "username": user.username
             },
             "token": access_token,
             "refresh_token": str(refresh)
@@ -299,11 +278,7 @@ class LoginAPIView(APIView):
 
         return self.generate_login_response(user)
 
-
-
-
 # for include user role in token
-
 class RoleLoginAPIView(APIView):
     """ API to authenticate users using multiple login methods """
 
@@ -312,7 +287,6 @@ class RoleLoginAPIView(APIView):
     def post(self, request):
         email = request.data.get("email")
         mobile_number = request.data.get("mobile_number")
-        application_id = request.data.get("application_id")
         password = request.data.get("password")
         otp = request.data.get("otp")
 
@@ -348,22 +322,7 @@ class RoleLoginAPIView(APIView):
 
             return self.generate_login_response(user)
 
-        # Case 3: Login with Application ID & Password
-        elif application_id and password:
-            try:
-                user = User.objects.get(application_id=application_id)
-            except User.DoesNotExist:
-                return Response({"error": "User with this application ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
-
-            if not user.is_active:
-                return Response({"error": "User account is inactive. Verify OTP first."}, status=status.HTTP_403_FORBIDDEN)
-
-            if not user.check_password(password):
-                return Response({"error": "Invalid password."}, status=status.HTTP_400_BAD_REQUEST)
-
-            return self.generate_login_response(user)
-
-        # Case 4: Login with Email & OTP
+        # Case 3: Login with Email & OTP
         elif email and otp:
             try:
                 user = User.objects.get(email=email)
@@ -371,18 +330,6 @@ class RoleLoginAPIView(APIView):
                 return Response({"error": "User with this email does not exist."}, status=status.HTTP_400_BAD_REQUEST)
 
             return self.verify_otp_login(session, user, otp)
-
-        # Case 5: Login with Application ID & OTP
-        elif application_id and otp:
-            try:
-                user = User.objects.get(application_id=application_id)
-            except User.DoesNotExist:
-                return Response({"error": "User with this application ID does not exist."}, status=status.HTTP_400_BAD_REQUEST)
-
-            return self.verify_otp_login(session, user, otp)
-
-        else:
-            return Response({"error": "Invalid login credentials."}, status=status.HTTP_400_BAD_REQUEST)
 
     def generate_login_response(self, user):
         """ Generate response upon successful login """
@@ -401,12 +348,12 @@ class RoleLoginAPIView(APIView):
                 "email": user.email,
                 "role": user.role.name if user.role else None,
                 "mobile_number": user.mobile_number,
-                "application_id": user.application_id,
-                "name": user.name,
+                "username": user.username,
             },
             "refresh": str(refresh),
             "access": str(refresh.access_token),
         }, status=status.HTTP_200_OK)
+        
         
     def verify_otp_login(self, session, user, otp_input):
         """ Verify OTP for login """
@@ -430,8 +377,6 @@ class RoleLoginAPIView(APIView):
         session.modified = True
 
         return self.generate_login_response(user)
-
-
 
 
 class RequestPasswordResetAPIView(APIView):
@@ -500,6 +445,43 @@ class ResetPasswordAPIView(APIView):
 
         return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
 
+
+class RoleCreateAPIView(APIView):
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        roles = Role.objects.all()
+        serializer = RoleSerializer(roles, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        serializer = RoleSerializer(data=request.data)
+        if serializer.is_valid():
+            role = serializer.save()
+            return Response(RoleSerializer(role).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def patch(self, request, pk):
+        try:
+            role = Role.objects.get(pk=pk)
+        except Role.DoesNotExist:
+            return Response({"error": "Role not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = RoleSerializer(role, data=request.data, partial=True)
+        if serializer.is_valid():
+            role = serializer.save()
+            return Response(RoleSerializer(role).data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    
+    def delete(self, request, pk):
+        try:
+            role = Role.objects.get(pk=pk)
+        except Role.DoesNotExist:
+            return Response({"error": "Role not found."}, status=status.HTTP_404_NOT_FOUND)
+        role.delete()
+        return Response({"message": "Role deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
+    
 
 class TranslatedTextViewSet(viewsets.ModelViewSet):
     

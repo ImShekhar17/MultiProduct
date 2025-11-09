@@ -1,7 +1,9 @@
 from django.db import models
-from django.contrib.auth.models import AbstractUser
-from django.contrib.auth.models import Group, Permission
+from django.contrib.auth.models import AbstractUser,Group,Permission
+from django.contrib.contenttypes.models import ContentType
+from django.contrib.contenttypes.fields import GenericForeignKey
 import uuid
+
 
 
 # Common Base Model
@@ -13,6 +15,36 @@ class Common(models.Model):
 
     class Meta:
         abstract = True
+        
+
+# User Model
+class User(AbstractUser,Common):
+   """
+   Custom user model supporting role assignment and subscriptions.
+   """
+   username = models.CharField(max_length=150, unique=True)
+   first_name = models.CharField(max_length=30)
+   last_name = models.CharField(max_length=30, blank=True)
+   email = models.EmailField(unique=True)
+   phone_number = models.CharField(max_length=15, unique=True)
+   date_of_birth = models.DateField(null=True, blank=True)
+   is_active = models.BooleanField(default=True)
+   is_staff = models.BooleanField(default=False)
+   role = models.ForeignKey('Role', on_delete=models.SET_NULL, null=True, blank=True)
+   gender = models.CharField(max_length=10, blank=True)
+   address = models.JSONField(null=True, blank=True)
+   notifications = models.JSONField(null=True, blank=True)
+   
+   class Meta:
+      permissions = [
+               ("deactivate_user", "Can deactivate user accounts"),
+               ("reset_user_password", "Can reset passwords for other users"),
+               ("view_user_activity", "Can view user activity or login history"),
+         ]
+
+   def __str__(self):
+      return self.username
+
 
 
 # Role System (Role + UserRole)
@@ -50,7 +82,7 @@ class UserRole(Common):
       ('guest', 'Guest User'),
    ]
 
-   user = models.ForeignKey('User', on_delete=models.CASCADE, related_name='user_roles')
+   user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_roles')
    role = models.ForeignKey(Role, on_delete=models.CASCADE, related_name='assigned_users')
    status = models.CharField(max_length=30, choices=STATUS_CHOICES, default='registered')
    assigned_date = models.DateTimeField(auto_now_add=True)
@@ -70,42 +102,13 @@ class UserRole(Common):
       return f"{self.user.username} → {self.role.name} ({self.status})"
 
 
-# User Model
-class User(AbstractUser,Common):
-   """
-   Custom user model supporting role assignment and subscriptions.
-   """
-   username = models.CharField(max_length=150, unique=True)
-   first_name = models.CharField(max_length=30)
-   last_name = models.CharField(max_length=30, blank=True)
-   email = models.EmailField(unique=True)
-   phone_number = models.CharField(max_length=15, unique=True)
-   date_of_birth = models.DateField(null=True, blank=True)
-   is_active = models.BooleanField(default=True)
-   is_staff = models.BooleanField(default=False)
-   role = models.ForeignKey(Role, on_delete=models.SET_NULL, null=True, blank=True)
-   gender = models.CharField(max_length=10, blank=True)
-   address = models.JSONField(null=True, blank=True)
-   notifications = models.JSONField(null=True, blank=True)
-   
-   class Meta:
-      permissions = [
-               ("deactivate_user", "Can deactivate user accounts"),
-               ("reset_user_password", "Can reset passwords for other users"),
-               ("view_user_activity", "Can view user activity or login history"),
-         ]
-
-   def __str__(self):
-      return self.username
-
-
 # Product & Subscription Plans
 class Product(Common):
    """
    Represents a product (e.g., CRM, Email Automation, Analytics).
    Each product can have its own subscription plans.
    """
-   name = models.CharField(max_length=100,null=True,blank=True, unique=True,index=True)
+   name = models.CharField(max_length=100,null=True,blank=True,unique=True)
    description = models.TextField(null=True, blank=True)
    base_price = models.DecimalField(max_digits=10, decimal_places=2)
    product_schema = models.JSONField(default=dict, null=True, blank=True)
@@ -160,21 +163,21 @@ class SubscriptionPlan(Common):
    def __str__(self):
       return f"{self.product.name} - {self.name}"
 
-from django.db import models
-from django.conf import settings
 
 class TranslatedText(models.Model):
-    original_text = models.TextField()
-    original_language = models.CharField(max_length=10)
-    translations = models.JSONField(default=dict)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+   content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
+   object_id = models.BigIntegerField()
+   content_object = GenericForeignKey('content_type', 'object_id')
+   language_code = models.CharField(max_length=10)
+   translated_text = models.TextField()
+   created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
-        return f"{self.original_text[:50]}... ({self.original_language})"
 
-    def get_translation(self, language_code):
-        return self.translations.get(language_code)
+   def __str__(self):
+      return f"{self.language_code} translation of {self.content_object}"
+
+   def get_translation(self, language_code):
+      return self.translations.get(language_code)
 
 # User Subscription (Per Product)
 class UserSubscription(Common):
