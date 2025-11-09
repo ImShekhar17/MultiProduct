@@ -1,10 +1,12 @@
 from rest_framework import serializers
+from django.contrib.auth import get_user_model
 from rest_framework.validators import ValidationError
 from django.conf import settings
 
 from api.models import *
 
-User=settings.AUTH_USER_MODEL
+
+User = get_user_model()
 
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -35,13 +37,11 @@ class RoleSerializer(serializers.ModelSerializer):
         # ID as string
         data['id'] = str(instance.id)
 
-
         # Group as "uuid_groupname" if exists
         if instance.group:
             data['group'] = f"{instance.group.id}_{instance.group.name}"
         else:
             data['group'] = None
-
         return data
 
 class UserSerializer(serializers.ModelSerializer):
@@ -60,7 +60,7 @@ class SignupSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["name", "email", "password", "confirm_password", "phone_number","first_name", "last_name", 'date_of_birth','gender','address']
+        fields = ["username", "email", "password", "confirm_password", "phone_number","first_name", "last_name", 'date_of_birth','gender','address']
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
@@ -77,9 +77,9 @@ class SignupSerializer(serializers.ModelSerializer):
         """Creates a user and securely sets the password"""
         validated_data.pop("confirm_password")
         user = User(
-            name=validated_data["name"],
+            username=validated_data["username"],
             email=validated_data["email"],
-            mobile_number=validated_data["phone_number"],
+            phone_number=validated_data["phone_number"],
             is_active=False  # User is inactive until OTP is verified
         )
         user.set_password(validated_data["password"])  # Securely set password
@@ -96,3 +96,9 @@ class ProductSerializer(serializers.ModelSerializer):
         if 'base_price' in data and not data['base_price'] >= 0:
             raise ValidationError("Product base price must be a positive number.")
         return data
+    
+
+class TranslatedTextSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TranslatedText
+        fields = '__all__'

@@ -1,0 +1,91 @@
+
+services:
+  web:
+    build: .
+    container_name: multiproduct-app
+    command: >
+      sh -c "python manage.py makemigrations &&
+            python manage.py migrate &&
+            python manage.py createsuperuser_if_none_exists &&
+            python manage.py runserver 0.0.0.0:8000"
+    env_file:
+      - .env
+    volumes:
+      - .:/usr/src/app
+    working_dir: /usr/src/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+    networks:
+      - multiproduct_network
+    restart: always
+
+  db:
+    image: postgres:17
+    container_name: multiproduct-db
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - multiproduct_db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - multiproduct_network
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: ["redis-server"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: always
+    networks:
+      - multiproduct_network
+
+  celery:
+    build: .
+    container_name: multiproduct-celery
+    command: ["./wait-for-redis.sh", "redis", "celery", "-A", "multiproduct", "worker", "-l", "info"]
+    volumes:
+      - .:/usr/src/app
+    working_dir: /usr/src/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - multiproduct_network
+
+  celery-beat:
+    build: .
+    container_name: multiproduct-celery-beat
+    command: ["./wait-for-redis.sh", "redis", "celery", "-A", "multiproduct", "beat", "-l", "info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
+    volumes:
+      - .:/usr/src/app
+    working_dir: /usr/src/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - multiproduct_network  
+
+networks:
+  multiproduct_network:
+    driver: bridge
+
+volumes:
+  multiproduct_db_data:
+  redis_data:
