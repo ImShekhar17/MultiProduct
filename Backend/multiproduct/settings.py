@@ -35,7 +35,7 @@ ALLOWED_HOSTS = [
     h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h
 ]
 
-AUTH_USER_MODEL = os.getenv("AUTH_USER_MODEL", "api.User")
+AUTH_USER_MODEL = os.getenv("AUTH_USER_MODEL", "authApp.User")
 
 # INTERNATIONALIZATION
 LANGUAGE_CODE = "en-us"
@@ -57,6 +57,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    
+    'social_django',
 
     # Third-party
     "django_celery_beat",
@@ -66,7 +68,8 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
 
     # Local apps
-    "api",
+    "authApp",
+    "serviceApp",
 ]
 
 # MIDDLEWARE
@@ -80,8 +83,32 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "api.middleware.LanguageTranslationMiddleware",
+    # "api.middleware.LanguageTranslationMiddleware",
+    "multiproduct.middleware.LanguageTranslationMiddleware",
 ]
+
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.google.GoogleOAuth2',      # GOOGLE
+    'social_core.backends.facebook.FacebookOAuth2',  # FACEBOOK
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+
+SOCIAL_AUTH_JSONFIELD_ENABLED = True
+
+# GOOGLE OAUTH SETTINGS
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = "YOUR_GOOGLE_CLIENT_ID"
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = "YOUR_GOOGLE_CLIENT_SECRET"
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['email', 'profile']
+
+# FACEBOOK SETTINGS
+SOCIAL_AUTH_FACEBOOK_KEY = "YOUR_FACEBOOK_APP_ID"
+SOCIAL_AUTH_FACEBOOK_SECRET = "YOUR_FACEBOOK_APP_SECRET"
+SOCIAL_AUTH_FACEBOOK_SCOPE = ['email']
+SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
+    'fields': 'id, name, email'
+}
+
 
 # URLS / WSGI
 

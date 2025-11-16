@@ -5,6 +5,7 @@ from api.views import (
     ResendOTPAPIView,
     LoginAPIView,
     RoleCreateAPIView,
+    SocialLoginAPIView,
 )
 
 
@@ -14,6 +15,9 @@ urlpatterns = [
     path('kn/auth/login/', LoginAPIView.as_view(), name='signup_default'),
     #role api
     path('kn/role/', RoleCreateAPIView.as_view(), name='role_create'),
+    
+    #Social Auth URLs
+    path('auth/social/token/', SocialLoginAPIView.as_view(), name='social_login_token'),
     
 ]
 

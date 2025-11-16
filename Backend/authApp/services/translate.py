@@ -1,7 +1,7 @@
 # api/services/translate.py
 from langdetect import detect, LangDetectException
 from googletrans import Translator
-from api.models import TranslatedText
+from authApp.models import TranslatedText
 from django.contrib.contenttypes.models import ContentType
 
 TARGET_LANGUAGE = "kn"  # translate to Kannada only
