@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from rest_framework.validators import ValidationError
 from django.conf import settings
 
-from api.models import *
+from authApp.models import *
 
 
 User = get_user_model()
@@ -89,18 +89,18 @@ class SignupSerializer(serializers.ModelSerializer):
         return user
 
 
-class ProductSerializer(serializers.ModelSerializer):
+class ResetPasswordSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Product
+        model = User
         fields = '__all__'
 
-    def validate_base_price(self, data):
-        if 'base_price' in data and not data['base_price'] >= 0:
-            raise ValidationError("Product base price must be a positive number.")
-        return data
+    # def validate_base_price(self, data):
+    #     if 'base_price' in data and not data['base_price'] >= 0:
+    #         raise ValidationError("Product base price must be a positive number.")
+    #     return data/c
 
 
-class TranslatedTextSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TranslatedText
-        fields = '__all__'
+# class TranslatedTextSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = TranslatedText
+#         fields = '__all__'

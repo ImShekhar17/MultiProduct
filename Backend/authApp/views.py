@@ -6,6 +6,7 @@ from datetime import timedelta
 
 # Third-Party
 import requests
+import logging
 
 # Django
 from django.conf import settings
@@ -25,7 +26,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 
 # Celery Tasks
-from authApp.tasks.send_mail_otp import send_email_otp
+from authApp.tasks.send_mail_otp import send_email_otp,send_welcome_email
 
 # Project Apps
 from authApp.models import User, Role
@@ -36,6 +37,9 @@ from authApp.serializers import (
 )
 
 User = get_user_model()
+
+logger = logging.getLogger(__name__)
+
 
 
 class SocialLoginAPIView(APIView):
@@ -189,6 +193,14 @@ class SignupAPIView(APIView):
             session.modified = True
 
             send_email_otp.delay(user.email, otp_code)
+            
+            # try:
+            #     send_email_otp.delay(user.email, otp_code)
+            #     logger.info(f"OTP task queued for {user.email}")
+            # except Exception as e:
+            #     logger.error(f"Failed to queue OTP task: {str(e)}")
+            #     # Fallback to synchronous email send
+            #     send_email_otp(user.email, otp_code)
 
             return Response(
                 {
@@ -227,6 +239,16 @@ class SignupAPIView(APIView):
 
             send_email_otp.delay(user.email, otp_code)
 
+            # try:
+            #     send_email_otp.delay(user.email, otp_code)
+            #     logger.info(f"OTP task queued for {user.email}")
+            # except Exception as e:
+            #     logger.error(f"Failed to queue OTP task: {str(e)}")
+            #     # Fallback to synchronous email send
+            #     send_email_otp(user.email, otp_code)
+
+            
+            
             return Response(
                 {"message": "Signup successful. OTP sent to your email."},
                 status=status.HTTP_201_CREATED,
@@ -301,6 +323,8 @@ class VerifyOTPAPIView(APIView):
         for key in ["otp", "otp_expires_at", "email"]:
             session.pop(key, None)
         session.modified = True
+        
+        send_welcome_email.delay(user.email, user.first_name)
 
         return Response(
             {

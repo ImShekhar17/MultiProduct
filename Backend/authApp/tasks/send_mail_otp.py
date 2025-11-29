@@ -1,5 +1,6 @@
 from celery import shared_task
 from authApp.services.translate import perform_translation
+from django.conf import settings
 
 @shared_task(name="api.tasks.translate_lang.translate_to_all_languages")
 def update_translations_for_model(translated_text_id, source_lang):
@@ -10,7 +11,7 @@ def update_translations_for_model(translated_text_id, source_lang):
 def send_email_otp(email, otp):
     from django.core.mail import send_mail
 
-    subject = "Your One-Time Password (OTP) - SBI Bank"
+    subject = "Your One-Time Password (OTP) - Kannada Bank"
     
     message = f"""
 Dear Customer,
@@ -39,7 +40,7 @@ This email and its contents are confidential and intended solely for the recipie
 If you received this email in error, please delete it immediately and notify us.
 """
     
-    from_email = "no-reply@sbi.com"
+    from_email = settings.DEFAULT_FROM_EMAIL
     recipient_list = [email]
     send_mail(subject, message, from_email, recipient_list)
 
@@ -50,12 +51,12 @@ If you received this email in error, please delete it immediately and notify us.
 def send_welcome_email(email, first_name):
     from django.core.mail import send_mail
 
-    subject = "Welcome to SBI Bank - Your Account is Ready"
+    subject = "Welcome to Kannada Bank - Your Account is Ready"
     
     message = f"""
 Dear {first_name},
 
-Welcome to SBI Bank! We are delighted to have you on board. 
+Welcome to Kannada Bank! We are delighted to have you on board. 
 Your account has been successfully registered, and you can now enjoy our secure and convenient banking services.
 
 Here are some important details for you to get started:
@@ -65,13 +66,13 @@ Here are some important details for you to get started:
 - Website: www.sbi.com
 
 We recommend you keep your login credentials secure and never share them with anyone. 
-For your safety, always verify the authenticity of emails and communications claiming to be from SBI Bank.
+For your safety, always verify the authenticity of emails and communications claiming to be from Kannada Bank.
 
-Thank you for choosing SBI Bank. We look forward to serving your financial needs.
+Thank you for choosing Kannada Bank. We look forward to serving your financial needs.
 
 Best regards,
 Admin Team
-SBI Bank
+Kannada Bank
 Email: support@sbi.com
 Phone: +91-XXXXXXXXXX
 Website: www.sbi.com
@@ -81,6 +82,6 @@ This email and its contents are confidential and intended solely for the recipie
 If you received this email in error, please delete it immediately and notify us.
 """
     
-    from_email = "no-reply@sbi.com"
+    from_email = settings.DEFAULT_FROM_EMAIL
     recipient_list = [email]
     send_mail(subject, message, from_email, recipient_list)

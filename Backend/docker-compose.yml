@@ -2,6 +2,7 @@
 services:
   web:
     build: .
+    # image: backend-web
     container_name: multiproduct-app
     command: >
       sh -c "python manage.py makemigrations &&

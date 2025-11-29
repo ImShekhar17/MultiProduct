@@ -1,4 +1,3 @@
-#!/bin/sh
 # wait-for-redis.sh
 set -e
 host="$1"

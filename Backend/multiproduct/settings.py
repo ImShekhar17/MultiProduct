@@ -193,6 +193,7 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
+#cronjobs for notification
 CELERY_BEAT_SCHEDULE = {
     "update": {
         "task": "api.scheduler.notification.send_notification",
@@ -205,13 +206,13 @@ CELERY_BEAT_SCHEDULE = {
 # EMAIL CONFIGURATION
 
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") in ("True", "true", "1")
-EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False") in ("True", "true", "1")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "webmaster@localhost")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "naurangilal9675329115@gmail.com")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "utik zhfb ryrh ucov")
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = True
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # DJANGO REST FRAMEWORK CONFIG
 
