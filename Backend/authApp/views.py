@@ -402,7 +402,7 @@ class LoginAPIView(APIView):
     def post(self, request):
         """Handle login with email/mobile + password or email + OTP."""
         email = request.data.get("email")
-        mobile_number = request.data.get("mobile_number")
+        phone_number = request.data.get("phone_number")
         password = request.data.get("password")
         otp = request.data.get("otp")
 
@@ -413,8 +413,8 @@ class LoginAPIView(APIView):
             return self._login_with_email_password(email, password)
 
         # Case 2: Login with Mobile Number & Password
-        if mobile_number and password:
-            return self._login_with_mobile_password(mobile_number, password)
+        if phone_number and password:
+            return self._login_with_mobile_password(phone_number, password)
 
         # Case 3: Login with Email & OTP
         if email and otp:
@@ -463,10 +463,10 @@ class LoginAPIView(APIView):
         return LoginAPIView._generate_login_response(user)
 
     @staticmethod
-    def _login_with_mobile_password(mobile_number, password):
+    def _login_with_mobile_password(phone_number, password):
         """Login with mobile number and password."""
         try:
-            user = User.objects.get(mobile_number=mobile_number)
+            user = User.objects.get(phone_number=phone_number)
         except User.DoesNotExist:
             return Response(
                 {"error": "User with this mobile number does not exist."},
@@ -502,7 +502,7 @@ class LoginAPIView(APIView):
                 "user": {
                     "id": user.id,
                     "email": user.email,
-                    "mobile_number": user.mobile_number,
+                    "phone_number": user.phone_number,
                     "username": user.username,
                 },
                 "token": access_token,
@@ -558,7 +558,7 @@ class RoleLoginAPIView(APIView):
     def post(self, request):
         """Handle login with role in JWT token."""
         email = request.data.get("email")
-        mobile_number = request.data.get("mobile_number")
+        phone_number = request.data.get("phone_number")
         password = request.data.get("password")
         otp = request.data.get("otp")
 
@@ -569,8 +569,8 @@ class RoleLoginAPIView(APIView):
             return self._login_with_email_password(email, password)
 
         # Case 2: Login with Mobile Number & Password
-        if mobile_number and password:
-            return self._login_with_mobile_password(mobile_number, password)
+        if phone_number and password:
+            return self._login_with_mobile_password(phone_number, password)
 
         # Case 3: Login with Email & OTP
         if email and otp:
@@ -619,10 +619,10 @@ class RoleLoginAPIView(APIView):
         return RoleLoginAPIView._generate_login_response(user)
 
     @staticmethod
-    def _login_with_mobile_password(mobile_number, password):
+    def _login_with_mobile_password(phone_number, password):
         """Login with mobile number and password."""
         try:
-            user = User.objects.get(mobile_number=mobile_number)
+            user = User.objects.get(phone_number=phone_number)
         except User.DoesNotExist:
             return Response(
                 {"error": "User with this mobile number does not exist."},
@@ -665,7 +665,7 @@ class RoleLoginAPIView(APIView):
                     "id": str(user.id),
                     "email": user.email,
                     "role": user.role.name if user.role else None,
-                    "mobile_number": user.mobile_number,
+                    "phone_number": user.phone_number,
                     "username": user.username,
                 },
                 "refresh": str(refresh),
