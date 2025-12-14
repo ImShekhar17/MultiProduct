@@ -1,10 +1,13 @@
 #!/bin/sh
-# wait-for-redis.sh
 set -e
-host="$1"
+
+HOST="$1"
 shift
-until nc -z "$host" 6379; do
-  echo "Waiting for Redis at $host:6379..."
+
+until nc -z "$HOST" 6379; do
+  echo "Waiting for Redis at $HOST..."
   sleep 2
 done
+
+echo "Redis is ready"
 exec "$@"

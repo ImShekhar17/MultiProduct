@@ -3,34 +3,39 @@ from django.contrib.auth import get_user_model
 from rest_framework.validators import ValidationError
 from django.conf import settings
 
-from api.models import *
+from authApp.models import *
 
 
 User = get_user_model()
+
 
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
         fields = '__all__'
 
+
 class GroupSerializer(serializers.ModelSerializer):
     permissions = PermissionSerializer(many=True, read_only=True)
+
     class Meta:
         model = Group
         fields = '__all__'
 
+
 class RolelistSerializer(serializers.ModelSerializer):
-    group=GroupSerializer(read_only=True)
+    group = GroupSerializer(read_only=True)
+
     class Meta:
-        model=Role
-        fields='__all__'
-       
-        
+        model = Role
+        fields = '__all__'
+
+
 class RoleSerializer(serializers.ModelSerializer):
     class Meta:
-        model=Role
-        fields='__all__'
-        
+        model = Role
+        fields = '__all__'
+
     def to_representation(self, instance):
         data = super().to_representation(instance)
 
@@ -44,23 +49,20 @@ class RoleSerializer(serializers.ModelSerializer):
             data['group'] = None
         return data
 
+
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'email', 'first_name', 'last_name', 'user_roles','is_active']
+        fields = ['username', 'email', 'first_name', 'last_name', 'user_roles', 'is_active']
 
-class RoleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Role
-        fields = '__all__'
-        
 
 class SignupSerializer(serializers.ModelSerializer):
     confirm_password = serializers.CharField(write_only=True, required=True)
 
     class Meta:
         model = User
-        fields = ["username", "email", "password", "confirm_password", "phone_number","first_name", "last_name", 'date_of_birth','gender','address']
+        fields = ["username", "email", "password", "confirm_password", "phone_number",
+                  "first_name", "last_name", 'date_of_birth', 'gender', 'address']
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
@@ -92,18 +94,18 @@ class SignupSerializer(serializers.ModelSerializer):
         return user
 
 
-class ProductSerializer(serializers.ModelSerializer):
+class ResetPasswordSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Product
+        model = User
         fields = '__all__'
-    
-    def validate_base_price(self, data):
-        if 'base_price' in data and not data['base_price'] >= 0:
-            raise ValidationError("Product base price must be a positive number.")
-        return data
-    
 
-class TranslatedTextSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TranslatedText
-        fields = '__all__'
+    # def validate_base_price(self, data):
+    #     if 'base_price' in data and not data['base_price'] >= 0:
+    #         raise ValidationError("Product base price must be a positive number.")
+    #     return data/c
+
+
+# class TranslatedTextSerializer(serializers.ModelSerializer):
+#     class Meta:
+#         model = TranslatedText
+#         fields = '__all__'
