@@ -48,7 +48,7 @@ class SubscriptionPlan(Common):
    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name="subscription_plans")
    name = models.CharField(max_length=100)
    plan_type = models.CharField(max_length=20, choices=PLAN_TYPE_CHOICES)
-   description = models.TextField(blank=True)
+   description = models.TextField(null=True, blank=True)
    duration_days = models.PositiveIntegerField(help_text="Duration in days")
    price = models.DecimalField(max_digits=10, decimal_places=2)
    discount = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
@@ -173,19 +173,4 @@ class Notification(Common):
 
    def __str__(self):
       return f"{self.receiver.username} - {self.title}"
-
-
-class TranslatedText(models.Model):
-   content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
-   object_id = models.BigIntegerField()
-   content_object = GenericForeignKey('content_type', 'object_id')
-   language_code = models.CharField(max_length=10)
-   translated_text = models.TextField()
-   created_at = models.DateTimeField(auto_now_add=True)
-
-
-   def __str__(self):
-      return f"{self.language_code} translation of {self.content_object}"
-
-   def get_translation(self, language_code):
-      return self.translations.get(language_code)   
+  

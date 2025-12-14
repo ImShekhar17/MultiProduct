@@ -3,7 +3,7 @@ from django.utils import timezone
 from datetime import timedelta
 from .models import (
     Product, SubscriptionPlan, UserSubscription, 
-    Invoice, Transaction, Notification, TranslatedText
+    Invoice, Transaction, Notification
 )
 
 
@@ -57,49 +57,57 @@ class PurchaseSubscriptionSerializer(serializers.Serializer):
     auto_renew = serializers.BooleanField(default=False)
     
     def validate(self, data):
-        # Validate product exists and is active
-        try:
-            product = Product.objects.get(id=data['product_id'], is_active=True)
-        except Product.DoesNotExist:
+        product = Product.objects.filter(
+            id=data['product_id'],
+            is_active=True
+        ).first()
+
+        if not product:
             raise serializers.ValidationError("Product not found or inactive")
-        
-        # Validate plan exists and belongs to product
-        try:
-            plan = SubscriptionPlan.objects.get(
-                id=data['plan_id'], 
-                product=product,
-                is_trial=False
+
+        plan = SubscriptionPlan.objects.filter(
+            id=data['plan_id'],
+            product=product,
+            is_trial=False
+        ).first()
+
+        if not plan:
+            raise serializers.ValidationError(
+                "Invalid plan, trial plan, or plan does not belong to this product"
             )
-        except SubscriptionPlan.DoesNotExist:
-            raise serializers.ValidationError("Invalid subscription plan for this product")
-        
+
         data['product'] = product
         data['plan'] = plan
         return data
 
-
-
 class InvoiceSerializer(serializers.ModelSerializer):
-    user_subscription_details = UserSubscriptionSerializer(source='user_subscription', read_only=True)
-
+    product_name = serializers.CharField(source='user_subscription.product.name', read_only=True)
+    user_email = serializers.CharField(source='user_subscription.user.email', read_only=True)
+    plan_name = serializers.CharField(source='user_subscription.plan.name', read_only=True)
+    
     class Meta:
         model = Invoice
-        fields = ['id', 'user_subscription', 'user_subscription_details', 'amount', 'issued_date', 'due_date', 'is_paid', 'transaction_ref', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'issued_date', 'created_at', 'updated_at']
+        fields = ['id', 'user_subscription', 'product_name', 'plan_name', 'amount', 
+                  'issued_date', 'due_date', 'is_paid', 'transaction_ref', 'user_email']
+        read_only_fields = ['id', 'issued_date']
 
 
 class TransactionSerializer(serializers.ModelSerializer):
+    invoices = InvoiceSerializer(source='invoice_set', many=True, read_only=True)
+    
     class Meta:
         model = Transaction
-        fields = ['id', 'user', 'total_amount', 'transaction_ref', 'status', 'payment_method', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ['id', 'user', 'total_amount', 'transaction_ref', 'status', 
+                  'payment_method', 'created_at', 'invoices']
+        read_only_fields = ['id', 'created_at']
 
 
 class NotificationSerializer(serializers.ModelSerializer):
-    receiver_username = serializers.CharField(source='receiver.username', read_only=True)
-    sender_username = serializers.CharField(source='sender.username', read_only=True, allow_null=True)
-
+    receiver_email = serializers.CharField(source='receiver.email', read_only=True)
+    sender_name = serializers.CharField(source='sender.username', read_only=True, allow_null=True)
+    
     class Meta:
         model = Notification
-        fields = ['id', 'receiver', 'receiver_username', 'sender', 'sender_username', 'title', 'message', 'is_read', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'created_at', 'updated_at']
+        fields = ['id', 'receiver', 'receiver_email', 'sender', 'sender_name', 'title', 
+                  'message', 'is_read', 'created_at']
+        read_only_fields = ['id', 'created_at']

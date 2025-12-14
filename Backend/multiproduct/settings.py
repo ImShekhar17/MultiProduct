@@ -196,7 +196,7 @@ CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 #cronjobs for notification
 CELERY_BEAT_SCHEDULE = {
     "update": {
-        "task": "api.scheduler.notification.send_notification",
+        "task": "authApp.scheduler.notification.send_notification",
         "schedule": timedelta(hours=5),
         "args": (12,),
     },
@@ -210,8 +210,8 @@ EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "naurangilal9675329115@gmail.com")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "utik zhfb ryrh ucov")
-EMAIL_USE_TLS = False
-EMAIL_USE_SSL = True
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # DJANGO REST FRAMEWORK CONFIG

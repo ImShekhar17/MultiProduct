@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #e74c3c; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+        .content { border: 1px solid #ddd; padding: 20px; }
+        .alert { background-color: #f8d7da; border-left: 4px solid #e74c3c; padding: 15px; margin: 20px 0; }
+        .details { background-color: #f9f9f9; padding: 15px; margin: 20px 0; }
+        .details p { margin: 8px 0; }
+        .footer { background-color: #ecf0f1; padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d; border-radius: 0 0 5px 5px; }
+        .button { display: inline-block; background-color: #e74c3c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Subscription Expiring Soon!</h1>
+        </div>
+        
+        <div class="content">
+            <p>Hello {{ user_name }},</p>
+            
+            <div class="alert">
+                <strong>⏰ Important:</strong> Your subscription to <strong>{{ product_name }}</strong> will expire in <strong>{{ days_until_expiry }} days</strong>.
+            </div>
+            
+            <div class="details">
+                <h3>Subscription Details</h3>
+                <p><strong>Product:</strong> {{ product_name }}</p>
+                <p><strong>Plan:</strong> {{ plan_name }}</p>
+                <p><strong>Expiry Date:</strong> {{ expiry_date|date:"M d, Y" }}</p>
+            </div>
+            
+            <p>To avoid any interruption in your service, please renew your subscription before the expiry date.</p>
+            
+            <a href="{{ site_url }}/services/subscriptions/renew/" class="button">Renew Now</a>
+            
+            <p style="margin-top: 20px; color: #7f8c8d; font-size: 14px;">
+                If you no longer wish to use this service, no action is required and your subscription will expire automatically.
+            </p>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2024 All rights reserved. This is an automated message, please do not reply.</p>
+        </div>
+    </div>
+</body>
+</html>

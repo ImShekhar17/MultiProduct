@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #f39c12; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+        .content { border: 1px solid #ddd; padding: 20px; }
+        .alert { background-color: #fff3cd; border-left: 4px solid #f39c12; padding: 15px; margin: 20px 0; }
+        .invoice-details { background-color: #f9f9f9; padding: 15px; margin: 20px 0; }
+        .invoice-details p { margin: 8px 0; }
+        .amount { font-size: 20px; color: #f39c12; font-weight: bold; margin: 15px 0; }
+        .footer { background-color: #ecf0f1; padding: 15px; text-align: center; font-size: 12px; color: #7f8c8d; border-radius: 0 0 5px 5px; }
+        .button { display: inline-block; background-color: #f39c12; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Payment Reminder</h1>
+        </div>
+        
+        <div class="content">
+            <p>Hello {{ user_name }},</p>
+            
+            <div class="alert">
+                <strong>⚠ Action Required:</strong> Your payment for Invoice {{ invoice_number }} is pending.
+            </div>
+            
+            <div class="invoice-details">
+                <h3>Invoice Details</h3>
+                <p><strong>Invoice Number:</strong> {{ invoice_number }}</p>
+                <p><strong>Product:</strong> {{ product_name }}</p>
+                <p><strong>Due Date:</strong> {{ due_date|date:"M d, Y" }}</p>
+            </div>
+            
+            <div class="amount">
+                Amount Due: ${{ amount }}
+            </div>
+            
+            <p>Please complete your payment to ensure uninterrupted service. If you've already paid, you can disregard this message.</p>
+            
+            <a href="{{ site_url }}/services/invoices/{{ invoice_number }}/pay/" class="button">Pay Now</a>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2024 All rights reserved. This is an automated message, please do not reply.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,9 +1,14 @@
-# services.py
 from django.db import transaction
 from django.utils import timezone
 from datetime import timedelta
 from decimal import Decimal
-from serviceApp.models import Product, SubscriptionPlan, UserSubscription
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
+from django.conf import settings
+import uuid
+from serviceApp.models import Invoice, Transaction, Notification,Product, SubscriptionPlan, UserSubscription
+
 
 
 class SubscriptionService:
@@ -273,3 +278,311 @@ class SubscriptionService:
             else:
                 subscription.status = 'expired'
                 subscription.save()
+
+class InvoiceService:
+    """
+    Service to handle invoice creation, payment, and email notifications
+    """
+    
+    @staticmethod
+    def generate_invoice_number():
+        """Generate unique invoice number"""
+        return f"INV-{timezone.now().strftime('%Y%m%d')}-{uuid.uuid4().hex[:8].upper()}"
+    
+    @staticmethod
+    def create_invoice(user_subscription, amount=None):
+        """
+        Create invoice for subscription purchase or renewal
+        
+        Args:
+            user_subscription: UserSubscription instance
+            amount: Optional custom amount (defaults to plan price)
+        
+        Returns:
+            Invoice instance
+        """
+        if amount is None:
+            amount = user_subscription.plan.price
+        
+        due_date = timezone.now().date() + timedelta(days=30)
+        
+        invoice = Invoice.objects.create(
+            user_subscription=user_subscription,
+            amount=amount,
+            due_date=due_date,
+            is_paid=False
+        )
+        
+        return invoice
+    
+    @staticmethod
+    def mark_invoice_paid(invoice, transaction_ref=None):
+        """
+        Mark invoice as paid and create transaction record
+        
+        Args:
+            invoice: Invoice instance
+            transaction_ref: Payment transaction reference
+        
+        Returns:
+            Updated Invoice instance
+        """
+        invoice.is_paid = True
+        invoice.transaction_ref = transaction_ref or f"TXN-{uuid.uuid4().hex[:10].upper()}"
+        invoice.save()
+        
+        return invoice
+    
+    @staticmethod
+    def send_invoice_email(invoice, email_type='purchase'):
+        """
+        Send invoice email to user
+        
+        Args:
+            invoice: Invoice instance
+            email_type: 'purchase', 'renewal', or 'reminder'
+        """
+        user = invoice.user_subscription.user
+        product = invoice.user_subscription.product
+        plan = invoice.user_subscription.plan
+        
+        context = {
+            'user_name': user.get_full_name() or user.first_name,
+            'invoice_number': invoice.id,
+            'product_name': product.name,
+            'plan_name': plan.name,
+            'amount': invoice.amount,
+            'issued_date': invoice.issued_date,
+            'due_date': invoice.due_date,
+            'transaction_ref': invoice.transaction_ref,
+            'is_paid': invoice.is_paid,
+            'email_type': email_type,
+            'site_url': settings.SITE_BASE_URL,
+        }
+        
+        if email_type == 'purchase':
+            subject = f'Invoice {invoice.id} - Purchase Confirmation'
+            template_name = 'emails/invoice_purchase.html'
+        elif email_type == 'renewal':
+            subject = f'Invoice {invoice.id} - Subscription Renewal'
+            template_name = 'emails/invoice_renewal.html'
+        else:  # reminder
+            subject = f'Payment Reminder - Invoice {invoice.id}'
+            template_name = 'emails/invoice_reminder.html'
+        
+        try:
+            html_message = render_to_string(template_name, context)
+            plain_message = strip_tags(html_message)
+            
+            email = EmailMultiAlternatives(
+                subject=subject,
+                body=plain_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[user.email]
+            )
+            email.attach_alternative(html_message, "text/html")
+            email.send()
+            
+            return True
+        except Exception as e:
+            print(f"Error sending invoice email: {str(e)}")
+            return False
+
+
+class PaymentService:
+    """
+    Service to handle payment transactions
+    """
+    
+    @staticmethod
+    def create_transaction(user, invoices, payment_method='card', total_amount=None):
+        """
+        Create transaction for one or multiple invoices
+        
+        Args:
+            user: User instance
+            invoices: List of Invoice instances
+            payment_method: Payment method used
+            total_amount: Optional custom total (auto-calculated if None)
+        
+        Returns:
+            Transaction instance
+        """
+        if total_amount is None:
+            total_amount = sum(inv.amount for inv in invoices)
+        
+        transaction_ref = f"TXN-{timezone.now().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:6].upper()}"
+        
+        transaction = Transaction.objects.create(
+            user=user,
+            total_amount=total_amount,
+            transaction_ref=transaction_ref,
+            payment_method=payment_method,
+            status='success'
+        )
+        
+        # Mark invoices as paid
+        for invoice in invoices:
+            InvoiceService.mark_invoice_paid(invoice, transaction_ref)
+        
+        return transaction
+    
+    @staticmethod
+    def process_payment(user, invoices, payment_method='card'):
+        """
+        Process payment for invoices
+        
+        Args:
+            user: User instance
+            invoices: List of Invoice instances
+            payment_method: Payment method
+        
+        Returns:
+            Transaction instance if successful, None otherwise
+        """
+        try:
+            transaction = PaymentService.create_transaction(
+                user=user,
+                invoices=invoices,
+                payment_method=payment_method
+            )
+            return transaction
+        except Exception as e:
+            print(f"Payment processing error: {str(e)}")
+            return None
+
+
+class NotificationService:
+    """
+    Service to handle user notifications
+    """
+    
+    @staticmethod
+    def send_purchase_notification(user_subscription, invoice):
+        """
+        Send notification after subscription purchase
+        
+        Args:
+            user_subscription: UserSubscription instance
+            invoice: Invoice instance
+        """
+        notification = Notification.objects.create(
+            receiver=user_subscription.user,
+            sender=None,
+            title=f'Subscription Purchased - {user_subscription.product.name}',
+            message=f'Your subscription to {user_subscription.product.name} ({user_subscription.plan.name}) '
+                   f'has been successfully purchased. Invoice #{invoice.id} for ${invoice.amount} '
+                   f'is due on {invoice.due_date}.',
+            is_read=False
+        )
+        
+        # Send email notification
+        InvoiceService.send_invoice_email(invoice, email_type='purchase')
+        
+        return notification
+    
+    @staticmethod
+    def send_renewal_notification(user_subscription, invoice):
+        """
+        Send notification for subscription renewal
+        
+        Args:
+            user_subscription: UserSubscription instance
+            invoice: Invoice instance
+        """
+        notification = Notification.objects.create(
+            receiver=user_subscription.user,
+            sender=None,
+            title=f'Subscription Renewed - {user_subscription.product.name}',
+            message=f'Your subscription to {user_subscription.product.name} has been successfully renewed. '
+                   f'Invoice #{invoice.id} for ${invoice.amount} is due on {invoice.due_date}.',
+            is_read=False
+        )
+        
+        # Send email notification
+        InvoiceService.send_invoice_email(invoice, email_type='renewal')
+        
+        return notification
+    
+    @staticmethod
+    def send_expiry_reminder_notification(user_subscription):
+        """
+        Send reminder notification before subscription expires
+        
+        Args:
+            user_subscription: UserSubscription instance
+        """
+        days_until_expiry = (user_subscription.end_date - timezone.now().date()).days
+        
+        notification = Notification.objects.create(
+            receiver=user_subscription.user,
+            sender=None,
+            title=f'Subscription Expiring Soon - {user_subscription.product.name}',
+            message=f'Your subscription to {user_subscription.product.name} ({user_subscription.plan.name}) '
+                   f'will expire in {days_until_expiry} days on {user_subscription.end_date}. '
+                   f'Please renew your subscription to avoid service interruption.',
+            is_read=False
+        )
+        
+        # Send email reminder
+        context = {
+            'user_name': user_subscription.user.get_full_name() or user_subscription.user.username,
+            'product_name': user_subscription.product.name,
+            'plan_name': user_subscription.plan.name,
+            'expiry_date': user_subscription.end_date,
+            'days_until_expiry': days_until_expiry,
+            'site_url': settings.SITE_BASE_URL,
+        }
+        
+        try:
+            html_message = render_to_string('emails/renewal_reminder.html', context)
+            plain_message = strip_tags(html_message)
+            
+            email = EmailMultiAlternatives(
+                subject=f'Subscription Expiring Soon - {user_subscription.product.name}',
+                body=plain_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[user_subscription.user.email]
+            )
+            email.attach_alternative(html_message, "text/html")
+            email.send()
+        except Exception as e:
+            print(f"Error sending renewal reminder email: {str(e)}")
+        
+        return notification
+    
+    @staticmethod
+    def send_payment_confirmation(user, transaction):
+        """
+        Send payment confirmation email
+        
+        Args:
+            user: User instance
+            transaction: Transaction instance
+        """
+        invoices = transaction.invoice_set.all()
+        
+        context = {
+            'user_name': user.get_full_name() or user.username,
+            'transaction_ref': transaction.transaction_ref,
+            'total_amount': transaction.total_amount,
+            'payment_method': transaction.payment_method,
+            'invoices': invoices,
+            'transaction_date': transaction.created_at,
+            'site_url': settings.SITE_BASE_URL,
+        }
+        
+        try:
+            html_message = render_to_string('emails/payment_confirmation.html', context)
+            plain_message = strip_tags(html_message)
+            
+            email = EmailMultiAlternatives(
+                subject=f'Payment Confirmation - {transaction.transaction_ref}',
+                body=plain_message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[user.email]
+            )
+            email.attach_alternative(html_message, "text/html")
+            email.send()
+        except Exception as e:
+            print(f"Error sending payment confirmation email: {str(e)}")

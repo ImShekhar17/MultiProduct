@@ -4,7 +4,7 @@ from django.core.mail import send_mail
 from django.conf import settings
 from datetime import timedelta
 import logging
-from serviceApp.services.services import SubscriptionService
+from serviceApp.services.services import SubscriptionService,NotificationService
 from serviceApp.models import UserSubscription, Product
 
 logger = logging.getLogger(__name__)
@@ -320,6 +320,24 @@ def cleanup_old_expired_subscriptions():
     
     logger.info(f"Found {count} old subscriptions for cleanup")
     return {"status": "success", "old_subscriptions": count}
+
+
+@shared_task
+def send_subscription_expiry_reminders():
+    """
+    Send expiry reminder notifications for subscriptions expiring in 7 days
+    """
+    reminder_date = timezone.now().date() + timedelta(days=7)
+    
+    expiring_subscriptions = UserSubscription.objects.filter(
+        end_date=reminder_date,
+        is_active=True
+    )
+    
+    for subscription in expiring_subscriptions:
+        NotificationService.send_expiry_reminder_notification(subscription)
+    
+    return f"Sent reminders for {expiring_subscriptions.count()} subscriptions"
 
 
 

@@ -8,13 +8,13 @@ import uuid
 
 # Common Base Model
 class Common(models.Model):
-    """Base abstract model for all tables"""
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+   """Base abstract model for all tables"""
+   id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+   created_at = models.DateTimeField(auto_now_add=True)
+   updated_at = models.DateTimeField(auto_now=True)
 
-    class Meta:
-        abstract = True
+   class Meta:
+      abstract = True
         
 
 # User Model
@@ -44,6 +44,10 @@ class User(AbstractUser,Common):
 
    def __str__(self):
       return self.username
+   
+   @property
+   def get_full_name(self):
+      return f"{self.first_name} {self.last_name}".strip()
 
 
 
