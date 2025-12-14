@@ -27,7 +27,7 @@ RUN pip install --upgrade pip \
 
 COPY . .
 
-# RUN chmod +x wait-for-redis.sh
+RUN chmod +x wait-for-redis.sh
 
 EXPOSE 8000
 
