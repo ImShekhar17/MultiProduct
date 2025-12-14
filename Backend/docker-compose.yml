@@ -2,12 +2,14 @@
 services:
   web:
     build: .
+    # image: backend-web
     container_name: multiproduct-app
     command: >
       sh -c "python manage.py makemigrations &&
             python manage.py migrate &&
             python manage.py createsuperuser_if_none_exists &&
             python manage.py runserver 0.0.0.0:8000"
+    
     env_file:
       - .env
     volumes:
@@ -55,8 +57,7 @@ services:
   celery:
     build: .
     container_name: multiproduct-celery
-    # command: ["./wait-for-redis.sh", "redis", "celery", "-A", "multiproduct", "worker", "-l", "info"]
-    command: sh -c "sleep 10 && celery -A multiproduct worker -l info"
+    command: ["./wait-for-redis.sh", "redis", "celery", "-A", "multiproduct", "worker", "-l", "info"]
     volumes:
       - .:/usr/src/app
     working_dir: /usr/src/app
@@ -71,8 +72,7 @@ services:
   celery-beat:
     build: .
     container_name: multiproduct-celery-beat
-    # command: ["./wait-for-redis.sh", "redis", "celery", "-A", "multiproduct", "beat", "-l", "info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
-    command: sh -c "sleep 10 && celery -A multiproduct beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
+    command: ["./wait-for-redis.sh", "redis", "celery", "-A", "multiproduct", "beat", "-l", "info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
     volumes:
       - .:/usr/src/app
     working_dir: /usr/src/app

@@ -35,7 +35,7 @@ ALLOWED_HOSTS = [
     h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h
 ]
 
-AUTH_USER_MODEL = os.getenv("AUTH_USER_MODEL", "api.User")
+AUTH_USER_MODEL = os.getenv("AUTH_USER_MODEL", "authApp.User")
 
 # INTERNATIONALIZATION
 LANGUAGE_CODE = "en-us"
@@ -57,6 +57,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    
+    'social_django',
 
     # Third-party
     "django_celery_beat",
@@ -66,7 +68,8 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
 
     # Local apps
-    "api",
+    "authApp",
+    "serviceApp",
 ]
 
 # MIDDLEWARE
@@ -80,8 +83,32 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "api.middleware.LanguageTranslationMiddleware",
+    # "api.middleware.LanguageTranslationMiddleware",
+    "multiproduct.middleware.LanguageTranslationMiddleware",
 ]
+
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.google.GoogleOAuth2',      # GOOGLE
+    'social_core.backends.facebook.FacebookOAuth2',  # FACEBOOK
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+
+SOCIAL_AUTH_JSONFIELD_ENABLED = True
+
+# GOOGLE OAUTH SETTINGS
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = "YOUR_GOOGLE_CLIENT_ID"
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = "YOUR_GOOGLE_CLIENT_SECRET"
+SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['email', 'profile']
+
+# FACEBOOK SETTINGS
+SOCIAL_AUTH_FACEBOOK_KEY = "YOUR_FACEBOOK_APP_ID"
+SOCIAL_AUTH_FACEBOOK_SECRET = "YOUR_FACEBOOK_APP_SECRET"
+SOCIAL_AUTH_FACEBOOK_SCOPE = ['email']
+SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
+    'fields': 'id, name, email'
+}
+
 
 # URLS / WSGI
 
@@ -166,9 +193,10 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
+#cronjobs for notification
 CELERY_BEAT_SCHEDULE = {
     "update": {
-        "task": "api.scheduler.notification.send_notification",
+        "task": "authApp.scheduler.notification.send_notification",
         "schedule": timedelta(hours=5),
         "args": (12,),
     },
@@ -178,13 +206,13 @@ CELERY_BEAT_SCHEDULE = {
 # EMAIL CONFIGURATION
 
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
-EMAIL_HOST = os.getenv("EMAIL_HOST", "")
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") in ("True", "true", "1")
-EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False") in ("True", "true", "1")
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "webmaster@localhost")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "naurangilal9675329115@gmail.com")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "utik zhfb ryrh ucov")
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
 # DJANGO REST FRAMEWORK CONFIG
 
