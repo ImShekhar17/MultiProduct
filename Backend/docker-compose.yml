@@ -4,13 +4,13 @@ services:
     # build: .
     image: backend-web
     container_name: multiproduct-app
-    # command: >
-    #   sh -c "python manage.py makemigrations &&
-    #         python manage.py migrate &&
-    #         python manage.py createsuperuser_if_none_exists &&
-    #         python manage.py runserver 0.0.0.0:8000"
+    command: >
+      sh -c "python manage.py makemigrations &&
+            python manage.py migrate &&
+            python manage.py createsuperuser_if_none_exists &&
+            python manage.py runserver 0.0.0.0:8000"
 
-    command: ["sleep", "infinity"]
+    # command: ["sleep", "infinity"]
     
     env_file:
       - .env
