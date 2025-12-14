@@ -55,7 +55,8 @@ services:
   celery:
     build: .
     container_name: multiproduct-celery
-    command: ["./wait-for-redis.sh", "redis", "celery", "-A", "multiproduct", "worker", "-l", "info"]
+    # command: ["./wait-for-redis.sh", "redis", "celery", "-A", "multiproduct", "worker", "-l", "info"]
+    command: sh -c "sleep 10 && celery -A multiproduct worker -l info"
     volumes:
       - .:/usr/src/app
     working_dir: /usr/src/app
@@ -70,7 +71,8 @@ services:
   celery-beat:
     build: .
     container_name: multiproduct-celery-beat
-    command: ["./wait-for-redis.sh", "redis", "celery", "-A", "multiproduct", "beat", "-l", "info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
+    # command: ["./wait-for-redis.sh", "redis", "celery", "-A", "multiproduct", "beat", "-l", "info", "--scheduler", "django_celery_beat.schedulers:DatabaseScheduler"]
+    command: sh -c "sleep 10 && celery -A multiproduct beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler"
     volumes:
       - .:/usr/src/app
     working_dir: /usr/src/app
