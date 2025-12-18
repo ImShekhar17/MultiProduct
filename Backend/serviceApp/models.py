@@ -93,6 +93,9 @@ class UserSubscription(Common):
 
    class Meta:
       unique_together = ('user', 'product', 'plan')
+      indexes = [
+          models.Index(fields=['status', 'end_date']),
+      ]
       permissions = [
          ("activate_subscription", "Can manually activate a subscription"),
          ("cancel_subscription", "Can cancel a user's subscription"),

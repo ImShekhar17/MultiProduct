@@ -1,11 +1,15 @@
 from celery import shared_task
 from django.utils import timezone
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from django.conf import settings
 from datetime import timedelta
 import logging
-from serviceApp.services.services import SubscriptionService,NotificationService
-from serviceApp.models import UserSubscription, Product
+from serviceApp.models import UserSubscription, Product, Invoice
+# We import services inside tasks to avoid circular imports if needed, 
+# but for simple tasks we can import them here if they don't import tasks.py back.
+# However, NotificationService is used in send_subscription_expiry_reminders.
 
 logger = logging.getLogger(__name__)
 
@@ -327,11 +331,12 @@ def send_subscription_expiry_reminders():
     """
     Send expiry reminder notifications for subscriptions expiring in 7 days
     """
+    from serviceApp.services.services import NotificationService
     reminder_date = timezone.now().date() + timedelta(days=7)
     
     expiring_subscriptions = UserSubscription.objects.filter(
         end_date=reminder_date,
-        is_active=True
+        status='active'
     )
     
     for subscription in expiring_subscriptions:
@@ -339,6 +344,38 @@ def send_subscription_expiry_reminders():
     
     return f"Sent reminders for {expiring_subscriptions.count()} subscriptions"
 
+
+@shared_task(bind=True, max_retries=3)
+def send_email_notification_task(self, subject, template_name, context, recipient_list):
+    """
+    Generic task to send emails asynchronously.
+    Handles serialization of complex objects like Invoices.
+    """
+    try:
+        # Re-fetch invoices if IDs were provided (for serialization safety)
+        if 'invoice_ids' in context:
+            invoice_ids = context.pop('invoice_ids')
+            invoices = Invoice.objects.filter(id__in=invoice_ids)
+            context['invoices'] = invoices
+
+        html_message = render_to_string(template_name, context)
+        plain_message = strip_tags(html_message)
+        
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=plain_message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            to=recipient_list
+        )
+        email.attach_alternative(html_message, "text/html")
+        email.send()
+        
+        logger.info(f"Successfully sent email: {subject} to {recipient_list}")
+        return {"status": "success", "subject": subject}
+        
+    except Exception as exc:
+        logger.error(f"Error sending email '{subject}': {str(exc)}")
+        raise self.retry(exc=exc, countdown=60)
 
 
 # celery.py (Add this to your project's celery configuration)
@@ -352,19 +389,19 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 # Celery Beat Schedule
 app.conf.beat_schedule = {
     'check-expired-subscriptions': {
-        'task': 'apps.subscriptions.tasks.check_expired_subscriptions',
+        'task': 'serviceApp.tasks.tasks.check_expired_subscriptions',
         'schedule': crontab(hour=0, minute=0),  # Daily at midnight
     },
     'check-subscriptions-expiring-soon': {
-        'task': 'apps.subscriptions.tasks.check_subscriptions_expiring_soon',
+        'task': 'serviceApp.tasks.tasks.check_subscriptions_expiring_soon',
         'schedule': crontab(hour=9, minute=0),  # Daily at 9 AM
     },
     'generate-subscription-analytics': {
-        'task': 'apps.subscriptions.tasks.generate_subscription_analytics',
+        'task': 'serviceApp.tasks.tasks.generate_subscription_analytics',
         'schedule': crontab(hour=1, minute=0),  # Daily at 1 AM
     },
     'cleanup-old-subscriptions': {
-        'task': 'apps.subscriptions.tasks.cleanup_old_expired_subscriptions',
+        'task': 'serviceApp.tasks.tasks.cleanup_old_expired_subscriptions',
         'schedule': crontab(day_of_month=1, hour=2, minute=0),  # Monthly on 1st at 2 AM
     },
 }

@@ -99,6 +99,37 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
         model = User
         fields = '__all__'
 
+
+class LoginSerializer(serializers.Serializer):
+    """
+    Handles input validation for multiple login methods.
+    Optimized for high load by performing basic validation before DB hits.
+    """
+    email = serializers.EmailField(required=False)
+    phone_number = serializers.CharField(required=False)
+    password = serializers.CharField(required=False)
+    otp = serializers.CharField(required=False, max_length=6)
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        phone_number = attrs.get('phone_number')
+        password = attrs.get('password')
+        otp = attrs.get('otp')
+
+        if not (email or phone_number):
+            raise serializers.ValidationError({"error": "Either email or phone number is required."})
+
+        if not (password or otp):
+            raise serializers.ValidationError({"error": "Either password or OTP is required."})
+
+        return attrs
+
+
+class UserOTPSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = UserOTP
+        fields = ['otp_code', 'expires_at']
+
     # def validate_base_price(self, data):
     #     if 'base_price' in data and not data['base_price'] >= 0:
     #         raise ValidationError("Product base price must be a positive number.")
