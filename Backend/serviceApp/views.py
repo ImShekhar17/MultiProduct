@@ -48,7 +48,7 @@ class ProductListAPIView(APIView):
             }, status=status.HTTP_201_CREATED)
         return Response({
             'success': False,
-            'errors': serializer.errors
+            'error': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -176,7 +176,7 @@ class PurchaseSubscriptionAPIView(APIView):
         if not serializer.is_valid():
             return Response({
                 'success': False,
-                'errors': serializer.errors
+                'error': serializer.errors
             }, status=status.HTTP_400_BAD_REQUEST)
         
         validated_data = serializer.validated_data

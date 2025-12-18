@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            background-color: #0a0a0c;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #121217;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid #1f1f27;
+        }
+
+        .header {
+            background: #000000;
+            color: #ffffff;
+            padding: 30px;
+            text-align: center;
+            border-bottom: 2px solid #00d4ff;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 20px;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            font-weight: 300;
+        }
+
+        .header span {
+            color: #00d4ff;
+            font-weight: 700;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .otp-box {
+            background: #1a1a21;
+            border: 1px solid #00d4ff;
+            border-radius: 4px;
+            padding: 30px;
+            text-align: center;
+            margin: 30px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .otp-box::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 4px;
+            height: 100%;
+            background: #00d4ff;
+        }
+
+        .otp-code {
+            font-size: 42px;
+            font-weight: 800;
+            color: #00d4ff;
+            letter-spacing: 12px;
+            margin: 0;
+            text-shadow: 0 0 15px rgba(0, 212, 255, 0.4);
+        }
+
+        .footer {
+            background: #08080a;
+            padding: 30px;
+            text-align: center;
+            font-size: 11px;
+            color: #555;
+            border-top: 1px solid #1f1f27;
+            letter-spacing: 1px;
+        }
+
+        .warning {
+            color: #ff3e3e;
+            font-weight: 500;
+            padding: 15px;
+            background: rgba(255, 62, 62, 0.05);
+            border: 1px solid rgba(255, 62, 62, 0.2);
+            border-radius: 4px;
+            margin-top: 20px;
+            font-size: 13px;
+            text-transform: uppercase;
+        }
+
+        .support-info {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #1f1f27;
+            font-size: 14px;
+            color: #888;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .container {
+                width: 100% !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+            }
+
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>STARK <span>INDUSTRIES</span></h1>
+        </div>
+        <div class="content">
+            <h2
+                style="color: #ffffff; margin-top: 0; font-weight: 300; text-transform: uppercase; letter-spacing: 2px;">
+                Identity <span style="color: #00d4ff;">Verification</span></h2>
+            <p>Access request detected for Stark Secure Systems. Authorized personnel must verify using the encrypted
+                sequence below.</p>
+
+            <div class="otp-box">
+                <p
+                    style="margin-bottom: 12px; font-size: 11px; color: #888; text-transform: uppercase; letter-spacing: 2px;">
+                    Alpha-Numeric Protocol</p>
+                <div class="otp-code">{{ otp }}</div>
+            </div>
+
+            <p style="font-size: 13px; color: #666;">This sequence will self-terminate in <strong>10 minutes</strong>.
+            </p>
+
+            <div class="warning">
+                CRITICAL SECURITY: Stark Staff will never request the bypass code. Do not disclose.
+            </div>
+
+            <div class="support-info">
+                <p>Unauthorized request? Contact <a href="mailto:jarvis@stark.com"
+                        style="color: #00d4ff; text-decoration: none; font-weight: bold;">Security Division</a> via
+                    encrypted channel.</p>
+            </div>
+        </div>
+        <div class="footer">
+            <p><strong>STARK INDUSTRIES <span>GLOBAL</span></strong><br>
+                Secure Systems Division | Malibu, California<br>
+                Jarvis OS Integrated Support</p>
+            <hr style="border: none; border-top: 1px solid #1f1f27; margin: 15px 0;">
+            <p>AUTO-GENERATED COMMUNIQUE. DO NOT RESPOND.<br>
+                &copy; 2025 STARK INDUSTRIES. ALL RIGHTS RESERVED.</p>
+        </div>
+    </div>
+</body>
+
+</html>
