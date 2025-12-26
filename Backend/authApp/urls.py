@@ -6,6 +6,7 @@ from authApp.views import (
     RoleCreateAPIView,
     SocialLoginAPIView,
     RoleLoginAPIView,
+    UsernameCheckAPIView,
 )
 
 
@@ -19,6 +20,7 @@ urlpatterns = [
     
     #Social Auth URLs
     path('kn/social/token/', SocialLoginAPIView.as_view(), name='social_login_token'),
+    path('kn/check-username/', UsernameCheckAPIView.as_view(), name='check_username'),
     
 ]
 
