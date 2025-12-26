@@ -115,11 +115,13 @@ class UserOTP(Common):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='otps')
     otp_code = models.CharField(max_length=6)
     is_used = models.BooleanField(default=False)
+    failed_attempts = models.IntegerField(default=0)
     expires_at = models.DateTimeField()
 
     class Meta:
         indexes = [
             models.Index(fields=['user', 'expires_at', 'is_used']),
+            models.Index(fields=['user', 'created_at']), # Optimized for rate-limiting queries
         ]
         verbose_name = "User OTP"
         verbose_name_plural = "User OTPs"

@@ -167,19 +167,28 @@ class SignupAPIView(APIView):
         if not email:
             return Response({"error": "Email is required."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Enterprise Rate Limiting: Max 10 signups/OTPs per day per account to prevent email abuse
+        one_day_ago = timezone.now() - timedelta(days=1)
+        daily_count = UserOTP.objects.filter(user__email=email, created_at__gt=one_day_ago).count()
+        if daily_count >= 10:
+            return Response(
+                {"error": "Too many verification requests. Please try again tomorrow."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
         try:
             # Atomic operation for data consistency
             with transaction.atomic():
-                user = User.objects.get(email=email)
+                user = User.objects.select_for_update().get(email=email)
 
                 if user.is_active:
                     return Response(
-                        {"error": "User already registered with this email."},
+                        {"error": "User already registered and verified with this email."},
                         status=status.HTTP_400_BAD_REQUEST,
                     )
 
                 # Resend OTP for existing inactive user
-                return self._process_otp_flow(user, "User already exists but not verified. OTP has been resent.")
+                return self._process_otp_flow(user, "User already exists but not verified. A new OTP has been sent.")
 
         except User.DoesNotExist:
             serializer = SignupSerializer(data=request.data)
@@ -188,23 +197,27 @@ class SignupAPIView(APIView):
 
             with transaction.atomic():
                 user = serializer.save()
-                # Default to inactive until OTP verification
-                user.is_active = False
+                user.is_active = False # Explicitly inactive
                 user.save(update_fields=["is_active"])
                 
                 return self._process_otp_flow(user, "Signup successful. OTP sent to your email.", status.HTTP_201_CREATED)
 
     def _process_otp_flow(self, user, success_message, status_code=status.HTTP_200_OK):
-        """Helper for OTP generation and dispatch."""
+        """Helper for OTP generation with high-performance cleanup and dispatch."""
         otp_code = str(random.randint(100000, 999999))
         
-        # Save to DB for cross-device support
-        UserOTP.objects.create(
-            user=user,
-            otp_code=otp_code,
-            expires_at=timezone.now() + timedelta(minutes=10)
-        )
+        # Self-Cleaning: Invalidate all existing unused OTPs for this user to keep index small
+        with transaction.atomic():
+            UserOTP.objects.filter(user=user, is_used=False).update(is_used=True)
+            
+            # Save new OTP to DB
+            UserOTP.objects.create(
+                user=user,
+                otp_code=otp_code,
+                expires_at=timezone.now() + timedelta(minutes=10)
+            )
 
+        # Dispatch async email
         send_email_otp.delay(user.email, otp_code)
         
         return Response({"message": success_message}, status=status_code)
@@ -230,30 +243,47 @@ class VerifyOTPAPIView(APIView):
         except User.DoesNotExist:
             return Response({"error": "User not found."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Lookup recent, unused OTP in DB
-        otp_record = UserOTP.objects.filter(
-            user=user,
-            otp_code=otp_input,
-            is_used=False,
-            expires_at__gt=timezone.now()
-        ).first()
-
-        if not otp_record:
-            return Response({"error": "Invalid or expired OTP."}, status=status.HTTP_400_BAD_REQUEST)
-
+        # High-concurrency protection using select_for_update
         with transaction.atomic():
-            # Activate user and mark OTP as used
+            # Lookup non-expired, unused OTP in DB and lock the row
+            otp_record = UserOTP.objects.filter(
+                user=user,
+                is_used=False,
+                expires_at__gt=timezone.now()
+            ).select_for_update().first()
+
+            if not otp_record:
+                return Response({"error": "No active OTP found for this account."}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Brute-force protection: check if account is already locked
+            if otp_record.failed_attempts >= 5:
+                # Mark as used to prevent further attempts on this specific OTP
+                otp_record.is_used = True
+                otp_record.save(update_fields=["is_used"])
+                return Response({"error": "Too many failed attempts. This OTP is now void. Please request a new one."}, status=status.HTTP_403_FORBIDDEN)
+
+            # Case: Incorrect OTP
+            if otp_record.otp_code != otp_input:
+                otp_record.failed_attempts += 1
+                otp_record.save(update_fields=["failed_attempts"])
+                
+                remaining = 5 - otp_record.failed_attempts
+                error_msg = f"Invalid OTP. {remaining} attempts remaining." if remaining > 0 else "Too many failed attempts. OTP invalidated."
+                return Response({"error": error_msg}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Case: Correct OTP - Activate user and mark OTP as used
             user.is_active = True
             user.save(update_fields=["is_active"])
             
             otp_record.is_used = True
             otp_record.save(update_fields=["is_used"])
         
+        # Async welcome email
         send_welcome_email.delay(user.email, user.first_name)
 
         return Response(
             {
-                "message": "OTP verified. Signup complete.",
+                "message": "OTP verified successfully. Signup complete.",
                 "username": user.username,
             },
             status=status.HTTP_200_OK,
@@ -278,7 +308,7 @@ class ResendOTPAPIView(APIView):
         except User.DoesNotExist:
             return Response({"error": "Account not found."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # DB-based rate limiting (Max 3 requests in 10 minutes)
+        # High-Load Rate Limiting (Max 3 requests in 10 minutes)
         ten_mins_ago = timezone.now() - timedelta(minutes=10)
         recent_requests = UserOTP.objects.filter(
             user=user, 
@@ -291,16 +321,28 @@ class ResendOTPAPIView(APIView):
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
-        # Generate and save new OTP
+        # Enterprise Daily Limit Check
+        one_day_ago = timezone.now() - timedelta(days=1)
+        daily_count = UserOTP.objects.filter(user=user, created_at__gt=one_day_ago).count()
+        if daily_count >= 10:
+            return Response(
+                {"error": "Daily verification limit reached. Try again tomorrow."},
+                status=status.HTTP_429_TOO_MANY_REQUESTS
+            )
+
+        # Generate and save new OTP using the signup helper logic for consistency
+        # Assuming we want to share the logic, we'd ideally have it in a mixin, 
+        # but for now we'll duplicate the fix for Signup/Resend for clarity.
         otp_code = str(random.randint(100000, 999999))
-        UserOTP.objects.create(
-            user=user,
-            otp_code=otp_code,
-            expires_at=timezone.now() + timedelta(minutes=10)
-        )
+        with transaction.atomic():
+            UserOTP.objects.filter(user=user, is_used=False).update(is_used=True)
+            UserOTP.objects.create(
+                user=user,
+                otp_code=otp_code,
+                expires_at=timezone.now() + timedelta(minutes=10)
+            )
 
         send_email_otp.delay(email, otp_code)
-
         return Response({"message": "A new OTP has been sent to your email."}, status=status.HTTP_200_OK)
 
 
@@ -530,23 +572,40 @@ class RoleLoginAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Check for non-expired, unused OTP
-        otp_record = UserOTP.objects.filter(
-            user=user, 
-            otp_code=otp_code, 
-            is_used=False,
-            expires_at__gt=timezone.now()
-        ).first()
+        # High-concurrency protection using select_for_update
+        with transaction.atomic():
+            # Check for non-expired, unused OTP and lock the row
+            otp_record = UserOTP.objects.filter(
+                user=user, 
+                is_used=False,
+                expires_at__gt=timezone.now()
+            ).select_for_update().first()
 
-        if not otp_record:
-            return Response(
-                {"error": "Invalid or expired OTP."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            if not otp_record:
+                return Response(
+                    {"error": "Invalid or expired OTP."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-        # Mark OTP as used atomically
-        otp_record.is_used = True
-        otp_record.save()
+            # Brute-force protection
+            if otp_record.failed_attempts >= 5:
+                # Mark as used to prevent further attempts on this specific OTP
+                otp_record.is_used = True
+                otp_record.save(update_fields=["is_used"])
+                return Response({"error": "Too many failed attempts. This OTP is now void. Please request a new one."}, status=status.HTTP_403_FORBIDDEN)
+
+            # Case: Incorrect OTP
+            if otp_record.otp_code != otp_code:
+                otp_record.failed_attempts += 1
+                otp_record.save(update_fields=["failed_attempts"])
+                
+                remaining = 5 - otp_record.failed_attempts
+                error_msg = f"Invalid OTP. {remaining} attempts remaining." if remaining > 0 else "Too many failed attempts. OTP invalidated."
+                return Response({"error": error_msg}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Mark OTP as used atomically
+            otp_record.is_used = True
+            otp_record.save(update_fields=["is_used"])
 
         return self._generate_response(user)
 
