@@ -2,6 +2,8 @@
 
 # Standard Library
 import random
+import re
+import time
 from datetime import timedelta
 
 # Third-Party
@@ -45,23 +47,28 @@ User = get_user_model()
 logger = logging.getLogger(__name__)
 
 
+USERNAME_RE = re.compile(r"^[a-z0-9_.]+$")
+
+def normalize_username(username):
+    """Stateless normalization for consistency using a professional engineer approach."""
+    return str(username or "").strip().lower()
+
 def generate_username_suggestions(base_username):
     """
     Generates available username suggestions using a Meta-style optimization:
-    1. Batch-check Redis first (Ultra-Fast).
-    2. Batch-check DB for anything missing from Redis.
-    3. Update Redis for next time.
+    1. Deterministic variants to reduce Redis & DB churn.
+    2. Batch-check Redis first (Ultra-Fast).
+    3. Batch-check DB for anything missing from Redis.
     """
-    import random
-    import string
-
+    base = normalize_username(base_username)
+    
     variations = [
-        f"{base_username}_{random.randint(10, 99)}",
-        f"{base_username}_{random.randint(100, 999)}",
-        f"{base_username}.official",
-        f"official_{base_username}",
-        f"the_{base_username}",
-        f"{base_username}_" + "".join(random.choices(string.ascii_lowercase, k=3)),
+        f"{base}_1",
+        f"{base}_2",
+        f"{base}_official",
+        f"the_{base}",
+        f"{base}.hq",
+        f"{base}_dev",
     ]
 
     available_suggestions = []
@@ -96,7 +103,8 @@ class UsernameCheckAPIView(APIView):
     FULL-PROOF ARCHITECTURE:
     1. L0: Local Memory Throttle (Prevents script flooding)
     2. L1: Redis Hit (Sub-millisecond global cache)
-    3. L2: Postgres Index (Truth source)
+    3. L2: Cache Stampede Guard (SETNX Lock)
+    4. L3: Postgres Index (Truth source)
     
     Capable of handling 50,000+ requests per second with minimal CPU usage.
     """
@@ -105,14 +113,17 @@ class UsernameCheckAPIView(APIView):
     throttle_scope = 'username_check'
 
     def get(self, request):
-        username = request.query_params.get("username", "").strip().lower()
+        username = normalize_username(request.query_params.get("username", ""))
 
         if not username:
             return Response({"error": "Username required"}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Optimization: Early exit for regex/validation
-        if not username.isalnum() and "_" not in username and "." not in username:
-             return Response({"available": False, "message": "Only alphanumeric, underscores, and dots allowed."}, status=status.HTTP_200_OK)
+        # Optimization: Strict Regex Validation (Safe + Fast)
+        if not USERNAME_RE.match(username):
+             return Response({
+                 "available": False, 
+                 "message": "Only letters, numbers, underscores, and dots allowed."
+             }, status=status.HTTP_200_OK)
 
         if len(username) < 3:
             return Response({"error": "Too short"}, status=status.HTTP_400_BAD_REQUEST)
@@ -122,14 +133,23 @@ class UsernameCheckAPIView(APIView):
         is_taken = cache.get(cache_key)
 
         if is_taken is None:
-            # L2: DB Hit (Postgres Index)
-            # This only happens ONCE per unique username per cache TTL
-            is_taken = User.objects.filter(username=username).exists()
-            
-            # PROTECT DB: Even if it's NOT taken, we cache 'False' (Negative Caching)
-            # This prevents "Cache Penetration" attacks where attackers ask for random names.
-            # Cache duration for free names is shorter (5m) to allow them to be taken.
-            cache.set(cache_key, is_taken, timeout=3600 if is_taken else 300)
+            # L2: Cache Stampede Guard
+            # If 1,000 users check the same new name at once, only 1 hits the DB
+            lock_key = f"uname_lock_{username}"
+            if cache.add(lock_key, 1, timeout=2): # SETNX behavior
+                # L3: DB Hit (Postgres Index)
+                is_taken = User.objects.filter(username=username).exists()
+                
+                # PROTECT DB: Cache the result (Negative Caching supported)
+                cache.set(cache_key, is_taken, timeout=3600 if is_taken else 300)
+                cache.delete(lock_key)
+            else:
+                # Other requests wait a tiny bit then hit the cache (which is now likely populated)
+                time.sleep(0.05)
+                is_taken = cache.get(cache_key)
+                if is_taken is None:
+                    # Fallback for unexpected race condition
+                    is_taken = User.objects.filter(username=username).exists()
 
         if is_taken:
             suggestions = generate_username_suggestions(username)
