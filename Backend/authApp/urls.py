@@ -6,18 +6,21 @@ from authApp.views import (
     RoleCreateAPIView,
     SocialLoginAPIView,
     RoleLoginAPIView,
+    UsernameCheckAPIView,
 )
 
 
 urlpatterns = [
     path('kn/signup/', SignupAPIView.as_view(), name='signup'),
     path('kn/verifyotp/', VerifyOTPAPIView.as_view(), name='signup_ta'),
+    path('kn/resend-otp/', ResendOTPAPIView.as_view(), name='resend_otp'),
     path('kn/login/', RoleLoginAPIView.as_view(), name='signup_default'),
     #role api
     path('kn/role/', RoleCreateAPIView.as_view(), name='role_create'),
     
     #Social Auth URLs
     path('kn/social/token/', SocialLoginAPIView.as_view(), name='social_login_token'),
+    path('kn/check-username/', UsernameCheckAPIView.as_view(), name='check_username'),
     
 ]
 
