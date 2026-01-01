@@ -15,9 +15,11 @@ from serviceApp.services.services import SubscriptionService,InvoiceService,Paym
 from serviceApp.models import *
 from serviceApp.serializers import *
 
+from multiproduct.logger import get_logger
+
 User = get_user_model()
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Create your views here.
 

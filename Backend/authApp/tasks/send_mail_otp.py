@@ -2,6 +2,7 @@ from celery import shared_task
 from django.utils import timezone
 from authApp.services.translate import perform_translation
 from django.conf import settings
+from multiproduct.config import SITE_BASE_URL, DEFAULT_FROM_EMAIL
 
 @shared_task(name="api.tasks.translate_lang.translate_to_all_languages")
 def update_translations_for_model(translated_text_id, source_lang):
@@ -20,8 +21,8 @@ def send_email_otp(email, otp):
     # Render HTML and Plain Text
     html_content = render_to_string('emails/otp.html', context)
     text_content = strip_tags(html_content)
-    
-    from_email = settings.DEFAULT_FROM_EMAIL
+
+    from_email = DEFAULT_FROM_EMAIL
     recipient_list = [email]
     
     msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)
@@ -42,8 +43,8 @@ def send_welcome_email(email, first_name):
     # Render HTML and Plain Text
     html_content = render_to_string('emails/welcome.html', context)
     text_content = strip_tags(html_content)
-    
-    from_email = settings.DEFAULT_FROM_EMAIL
+
+    from_email = DEFAULT_FROM_EMAIL
     recipient_list = [email]
     
     msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)

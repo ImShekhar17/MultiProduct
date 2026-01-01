@@ -11,7 +11,6 @@ import requests
 import logging
 
 # Django
-from django.conf import settings
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
@@ -41,7 +40,14 @@ from authApp.serializers import (
     ResetPasswordSerializer,
     LoginSerializer,
 )
-
+from multiproduct.config import (
+    AUTH_USER_MODEL,
+    SITE_BASE_URL,
+    FACEBOOK_APP_ID,
+    FACEBOOK_APP_SECRET,
+    GOOGLE_CLIENT_ID,
+    GOOGLE_CLIENT_SECRET
+)
 User = get_user_model()
 
 logger = logging.getLogger(__name__)
@@ -257,8 +263,8 @@ class SocialLoginAPIView(APIView):
     @staticmethod
     def verify_facebook_token(token):
         """Verify Facebook OAuth token."""
-        app_id = settings.FACEBOOK_APP_ID
-        app_secret = settings.FACEBOOK_APP_SECRET
+        app_id = FACEBOOK_APP_ID
+        app_secret = FACEBOOK_APP_SECRET
         debug_url = (
             f"https://graph.facebook.com/debug_token?"
             f"input_token={token}&access_token={app_id}|{app_secret}"
@@ -788,7 +794,7 @@ class RequestPasswordResetAPIView(APIView):
         token = default_token_generator.make_token(user)
         uid = urlsafe_base64_encode(force_bytes(user.pk))
         reset_url = (
-            f"{settings.FRONTEND_URL}/reset-password/?uid={uid}&token={token}"
+            f"{SITE_BASE_URL}/reset-password/?uid={uid}&token={token}"
         )
 
         # Send email with reset link (async preferred)

@@ -36,12 +36,18 @@ class SubscriptionPlan(Common):
    Defines pricing and duration options for each product.
    Example: CRM - Monthly, Quarterly, Yearly.
    """
+   WEEKLY = 'weekly'
+   MONTHLY = 'monthly'
+   QUARTERLY = 'quarterly'
+   HALF_YEARLY = 'half_yearly'
+   YEARLY = 'yearly'
+   
    PLAN_TYPE_CHOICES = [
-      ('weekly', 'Weekly'),
-      ('monthly', 'Monthly'),
-      ('quarterly', 'Quarterly'),
-      ('half_yearly', 'Half-Yearly'),
-      ('yearly', 'Yearly'),
+      (WEEKLY, 'Weekly'),
+      (MONTHLY, 'Monthly'),
+      (QUARTERLY, 'Quarterly'),
+      (HALF_YEARLY, 'Half-Yearly'),
+      (YEARLY, 'Yearly'),
    ]
 
    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="plans")
@@ -76,11 +82,16 @@ class UserSubscription(Common):
    Each subscription represents one user's access to a specific product
    under a specific plan. Independent per product.
    """
+   TRIAL = 'trial'
+   ACTIVE = 'active'
+   EXPIRED = 'expired'
+   CANCELLED = 'cancelled'
+   
    STATUS_CHOICES = [
-      ('trial', 'Trial'),
-      ('active', 'Active'),
-      ('expired', 'Expired'),
-      ('cancelled', 'Cancelled'),
+      (TRIAL, 'Trial'),
+      (ACTIVE, 'Active'),
+      (EXPIRED, 'Expired'),
+      (CANCELLED, 'Cancelled'),
    ]
 
    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')

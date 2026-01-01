@@ -78,12 +78,18 @@ class UserRole(Common):
    Bridge between User and Role.
    Supports users without subscriptions (Registered, Guest, etc.).
    """
+   REGISTERED = 'registered'
+   TRIAL = 'trial'
+   ACTIVE = 'active'
+   EXPIRED = 'expired'
+   GUEST = 'guest'
+   
    STATUS_CHOICES = [
-      ('registered', 'Registered (no subscription)'),
-      ('trial', 'Trial'),
-      ('active', 'Active Subscriber'),
-      ('expired', 'Expired Subscriber'),
-      ('guest', 'Guest User'),
+      (REGISTERED, 'Registered (no subscription)'),
+      (TRIAL, 'Trial'),
+      (ACTIVE, 'Active Subscriber'),
+      (EXPIRED, 'Expired Subscriber'),
+      (GUEST, 'Guest User'),
    ]
 
    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user_roles')

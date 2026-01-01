@@ -3,10 +3,11 @@ from django.utils import timezone
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from django.conf import settings
 from datetime import timedelta
 import logging
 from serviceApp.models import UserSubscription, Product, Invoice
+from serviceApp.services.services import NotificationService
+from multiproduct.config import DEFAULT_FROM_EMAIL
 # We import services inside tasks to avoid circular imports if needed, 
 # but for simple tasks we can import them here if they don't import tasks.py back.
 # However, NotificationService is used in send_subscription_expiry_reminders.
@@ -57,7 +58,7 @@ def send_subscription_expiry_reminder(self, subscription_id, days_before):
         send_mail(
             subject,
             message,
-            settings.DEFAULT_FROM_EMAIL,
+            DEFAULT_FROM_EMAIL,
             [subscription.user.email],
             fail_silently=False,
         )
@@ -87,7 +88,7 @@ def check_subscriptions_expiring_soon():
         
         subscriptions = UserSubscription.objects.filter(
             end_date=target_date,
-            status__in=['active', 'trial']
+            status__in=[UserSubscription.ACTIVE, UserSubscription.TRIAL]
         ).select_related('user', 'product')
         
         for subscription in subscriptions:
@@ -108,7 +109,7 @@ def process_failed_renewal(self, subscription_id):
             'user', 'product', 'plan'
         ).get(id=subscription_id)
         
-        if subscription.status != 'expired':
+        if subscription.status != UserSubscription.EXPIRED:
             return {"status": "skipped", "message": "Subscription not expired"}
         
         # Attempt renewal one more time
@@ -119,7 +120,7 @@ def process_failed_renewal(self, subscription_id):
             send_mail(
                 f"Your {subscription.product.name} subscription has been renewed",
                 f"Your payment was successful and your subscription is now active.",
-                settings.DEFAULT_FROM_EMAIL,
+                DEFAULT_FROM_EMAIL,
                 [subscription.user.email],
                 fail_silently=False,
             )
@@ -137,7 +138,7 @@ def process_failed_renewal(self, subscription_id):
                 
                 Please update your payment method and renew manually.
                 """,
-                settings.DEFAULT_FROM_EMAIL,
+                DEFAULT_FROM_EMAIL,
                 [subscription.user.email],
                 fail_silently=False,
             )
@@ -162,19 +163,19 @@ def generate_subscription_analytics():
     today = timezone.now().date()
     
     # Active subscriptions
-    active_subs = UserSubscription.objects.filter(status='active').count()
-    trial_subs = UserSubscription.objects.filter(status='trial').count()
+    active_subs = UserSubscription.objects.filter(status=UserSubscription.ACTIVE).count()
+    trial_subs = UserSubscription.objects.filter(status=UserSubscription.TRIAL).count()
     
     # New subscriptions today
     new_subs_today = UserSubscription.objects.filter(
         created_at__date=today,
-        status='active'
+        status=UserSubscription.ACTIVE
     ).count()
     
     # Expired/Cancelled today
     churned_today = UserSubscription.objects.filter(
         updated_at__date=today,
-        status__in=['expired', 'cancelled']
+        status__in=[UserSubscription.EXPIRED, UserSubscription.CANCELLED]
     ).count()
     
     # Calculate MRR (Monthly Recurring Revenue)
@@ -239,7 +240,7 @@ def send_subscription_confirmation(self, subscription_id):
         send_mail(
             subject,
             message,
-            settings.DEFAULT_FROM_EMAIL,
+            DEFAULT_FROM_EMAIL,
             [subscription.user.email],
             fail_silently=False,
         )
@@ -284,7 +285,7 @@ def send_cancellation_confirmation(self, subscription_id):
         send_mail(
             subject,
             message,
-            settings.DEFAULT_FROM_EMAIL,
+            DEFAULT_FROM_EMAIL,
             [subscription.user.email],
             fail_silently=False,
         )
@@ -309,7 +310,7 @@ def cleanup_old_expired_subscriptions():
     one_year_ago = timezone.now().date() - timedelta(days=365)
     
     old_subscriptions = UserSubscription.objects.filter(
-        status__in=['expired', 'cancelled'],
+        status__in=[UserSubscription.EXPIRED, UserSubscription.CANCELLED],
         updated_at__date__lt=one_year_ago
     )
     
@@ -331,12 +332,12 @@ def send_subscription_expiry_reminders():
     """
     Send expiry reminder notifications for subscriptions expiring in 7 days
     """
-    from serviceApp.services.services import NotificationService
+   
     reminder_date = timezone.now().date() + timedelta(days=7)
     
     expiring_subscriptions = UserSubscription.objects.filter(
         end_date=reminder_date,
-        status='active'
+        status=UserSubscription.ACTIVE
     )
     
     for subscription in expiring_subscriptions:
@@ -364,7 +365,7 @@ def send_email_notification_task(self, subject, template_name, context, recipien
         email = EmailMultiAlternatives(
             subject=subject,
             body=plain_message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=DEFAULT_FROM_EMAIL,
             to=recipient_list
         )
         email.attach_alternative(html_message, "text/html")

@@ -1,8 +1,8 @@
 
 services:
   web:
-    build: .
-    # image: backend-web
+    # build: .
+    image: backend-web:latest
     container_name: multiproduct-app
     command: >
       sh -c "python manage.py makemigrations &&
@@ -32,10 +32,10 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d product"]
+      interval: 10s
       timeout: 5s
-      retries: 10
+      retries: 5
     volumes:
       - multiproduct_db_data:/var/lib/postgresql/data
     ports:

@@ -148,9 +148,9 @@ WSGI_APPLICATION = "multiproduct.wsgi.application"
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'Products'),
+        'NAME': os.getenv('POSTGRES_DB', 'product'),
         'USER': os.getenv('POSTGRES_USER', 'postgres'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'Samsung@5310'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', 'Naurang@234'),
         'HOST': os.getenv('DB_HOST', 'db'), 
         'PORT': os.getenv('DB_PORT', '5432'),
     }

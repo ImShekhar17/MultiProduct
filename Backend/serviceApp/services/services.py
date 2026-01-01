@@ -5,11 +5,14 @@ from decimal import Decimal
 from django.core.mail import send_mail, EmailMultiAlternatives
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
-from django.conf import settings
 import uuid
-from serviceApp.models import Invoice, Transaction, Notification,Product, SubscriptionPlan, UserSubscription
+from serviceApp.models import (
+    Invoice, Transaction, 
+    Notification,Product, SubscriptionPlan, 
+    UserSubscription
+)
 
-
+from multiproduct.config import SITE_BASE_URL
 
 class SubscriptionService:
     """
@@ -357,7 +360,7 @@ class InvoiceService:
             'transaction_ref': invoice.transaction_ref,
             'is_paid': invoice.is_paid,
             'email_type': email_type,
-            'site_url': settings.SITE_BASE_URL,
+            'site_url': SITE_BASE_URL,
         }
         
         if email_type == 'purchase':
@@ -523,7 +526,7 @@ class NotificationService:
             'plan_name': user_subscription.plan.name,
             'expiry_date': user_subscription.end_date.strftime('%Y-%m-%d'),
             'days_until_expiry': days_until_expiry,
-            'site_url': settings.SITE_BASE_URL,
+            'site_url': SITE_BASE_URL,
         }
         
         from ..tasks.tasks import send_email_notification_task
@@ -553,7 +556,7 @@ class NotificationService:
             'total_amount': str(transaction.total_amount),
             'payment_method': transaction.payment_method,
             'transaction_date': transaction.created_at.strftime('%Y-%m-%d %H:%M:%S'),
-            'site_url': settings.SITE_BASE_URL,
+            'site_url': SITE_BASE_URL,
             # Note: invoices are handled in the task or passed as IDs if needed
             'invoice_ids': list(invoices.values_list('id', flat=True))
         }
