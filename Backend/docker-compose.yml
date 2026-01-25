@@ -20,8 +20,6 @@ services:
     depends_on:
       - db
       - redis
-    networks:
-      - multiproduct_network
     restart: always
 
   db:
@@ -40,8 +38,6 @@ services:
       - multiproduct_db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    networks:
-      - multiproduct_network
   redis:
     image: redis:7-alpine
     container_name: redis
@@ -51,8 +47,6 @@ services:
     volumes:
       - redis_data:/data
     restart: always
-    networks:
-      - multiproduct_network
 
   celery:
     build: .
@@ -66,8 +60,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    networks:
-      - multiproduct_network
 
   celery-beat:
     build: .
@@ -81,12 +73,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    networks:
-      - multiproduct_network  
 
-networks:
-  multiproduct_network:
-    driver: bridge
 
 volumes:
   multiproduct_db_data:
