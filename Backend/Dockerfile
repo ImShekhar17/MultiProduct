@@ -23,13 +23,10 @@ COPY requirements.txt ./
 RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt --root-user-action=ignore
 
-
-
 COPY . .
 
 COPY ./wait-for-redis.sh ./wait-for-redis.sh
 RUN chmod +x ./wait-for-redis.sh
-
 
 EXPOSE 8000
 

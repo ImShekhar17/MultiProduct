@@ -51,7 +51,6 @@ LANGUAGES = [
 
 # APPLICATIONS
 INSTALLED_APPS = [
-    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -59,7 +58,6 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     
-    "channels",
     'social_django',
 
     # Third-party
@@ -136,7 +134,6 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "multiproduct.wsgi.application"
-ASGI_APPLICATION = "multiproduct.asgi.application"
 
 # DATABASE CONFIGURATION
 # DATABASES = {
@@ -176,17 +173,6 @@ else:
         "default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache"}
     }
 
-# CHANNEL LAYERS (Professional Redis Configuration)
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [os.getenv("REDIS_URL", "redis://redis:6379/0")],
-            "symmetric_encryption_keys": [SECRET_KEY],
-        },
-    },
-}
-
 # STATIC & MEDIA FILES
 
 STATIC_URL = "/static/"
@@ -220,10 +206,6 @@ CELERY_BEAT_SCHEDULE = {
     "cleanup_otps": {
         "task": "authApp.tasks.send_mail_otp.cleanup_expired_otps",
         "schedule": crontab(minute=0, hour='*'),  # Run every hour
-    },
-    "system_pulse_heartbeat": {
-        "task": "authApp.tasks.pulse_heartbeat.broadcast_system_pulse",
-        "schedule": 5.0, # Professional Standard: 5s Heartbeat
     },
 }
 
