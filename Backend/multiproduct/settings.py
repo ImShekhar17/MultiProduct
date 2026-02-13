@@ -196,6 +196,25 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
+# HYPER-SCALE OPTIMIZATIONS (1,000,000+ requests)
+CELERY_BROKER_POOL_LIMIT = int(os.getenv("CELERY_POOL_LIMIT", 100)) # Minimize connection overhead
+CELERY_TASK_ACKS_LATE = True # Ensure reliability at scale
+CELERY_WORKER_PREFETCH_MULTIPLIER = int(os.getenv("CELERY_PREFETCH", 4)) # Optimized for fast tasks
+CELERY_WORKER_CONCURRENCY = int(os.getenv("CELERY_CONCURRENCY", 8)) # Based on CPU/IO
+
+# TASK ROUTING (Isolation for zero-latency)
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+CELERY_TASK_QUEUES = {
+    'default': {
+        'exchange': 'default',
+        'routing_key': 'default',
+    },
+    'high_priority': {
+        'exchange': 'high_priority',
+        'routing_key': 'high_priority',
+    },
+}
+
 #cronjobs for notification
 CELERY_BEAT_SCHEDULE = {
     "update": {
@@ -288,6 +307,7 @@ LOGGING = {
 
 # FEATURE FLAGS
 
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 SITE_BASE_URL = os.getenv("SITE_BASE_URL", "http://localhost:8000")
 ENABLE_RAZORPAY = os.getenv("ENABLE_RAZORPAY", "False") in ("True", "true", "1")
 
