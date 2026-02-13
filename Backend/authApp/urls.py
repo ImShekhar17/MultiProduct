@@ -1,4 +1,5 @@
 from django.urls import path
+from rest_framework_simplejwt.views import TokenRefreshView, TokenVerifyView
 from authApp.views import (
     SignupAPIView,
     VerifyOTPAPIView,
@@ -7,6 +8,8 @@ from authApp.views import (
     SocialLoginAPIView,
     RoleLoginAPIView,
     UsernameCheckAPIView,
+    RequestPasswordResetAPIView,
+    ResetPasswordAPIView,
 )
 
 
@@ -21,6 +24,13 @@ urlpatterns = [
     #Social Auth URLs
     path('kn/social/token/', SocialLoginAPIView.as_view(), name='social_login_token'),
     path('kn/check-username/', UsernameCheckAPIView.as_view(), name='check_username'),
-    
+
+    # Password Reset URLs
+    path('kn/password-reset-request/', RequestPasswordResetAPIView.as_view(), name='password_reset_request'),
+    path('kn/password-reset-confirm/', ResetPasswordAPIView.as_view(), name='password_reset_confirm'),
+
+    # JWT Token Management
+    path('kn/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('kn/token/verify/', TokenVerifyView.as_view(), name='token_verify'),
 ]
 

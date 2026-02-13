@@ -34,6 +34,12 @@ Verification is anchored in the `UserOTP` model, engineered for cross-device per
 - **Google OAuth2**: Integrated via `SocialLoginAPIView` with secure token verification.
 - **Facebook OAuth2**: Dedicated graph-api verification for social profile harvesting.
 
+### 1.4 Advanced Recovery Sequence
+To ensure user continuity during lost access, we've implemented an **Industrial-Grade Recovery Flow**.
+- **Asynchronous Dispatch**: Reset signals are offloaded to the `high_priority` Celery queue for 0ms user-perceived latency.
+- **Encryption Sequences**: Utilizing `uidb64` and `token` based verification to ensure reset links are single-use and tamper-proof.
+- **Professional Branding**: Integrated bespoke HTML templates for a premium "Stark" recovery experience.
+
 ---
 
 ## ⚡ Chapter II: The Meta-Grade Performance Engine
@@ -79,6 +85,11 @@ The `serviceApp` is the beating heart of our commercial logic.
 - **Asynchronous Dispatch**: Offloaded to Celery to ensure 0ms latency for the end-user.
 - **Branding**: Integrated Stark-Industries HTML templates for professional dark-mode styling.
 
+### 4.3 Personalized Onboarding
+Identity is at the core of our communication layer.
+- **Dynamic Greeting Fallbacks**: The `welcome.html` template utilizes a priority heuristic: `username` → `first_name`. This ensures every engagement is personalized, even if a user has not yet completed their profile.
+- **Enhanced Task Payloads**: Celery task signatures are engineered to carry rich user metadata, allowing for multi-variable personalization without additional DB lookups during dispatch.
+
 ---
 
 ## 🛠️ Chapter V: The Admin's Toolbox (Command Reference)
@@ -98,11 +109,18 @@ docker-compose exec web python manage.py createsuperuser
 
 ### 5.2 Background Maintenance
 ```bash
-# Monitor Celery Heartbeat
-docker logs -f multiproduct-celery
+# Monitor Celery Heartbeat (Combined)
+docker logs -f multiproduct-celery-default
+docker logs -f multiproduct-celery-high
 
-# Restart Processing Units
-docker restart multiproduct-celery multiproduct-celery-beat
+# Scaling specific worker units
+docker-compose up -d --scale celery-default=3
+```
+
+### 5.3 Automated Cleanup
+```bash
+# Trigger manual OTP cleanup
+docker-compose exec web python manage.py cleanup_otps
 ```
 
 ---
@@ -118,6 +136,8 @@ docker restart multiproduct-celery multiproduct-celery-beat
 | `/auth/kn/login/` | `POST` | Multi-mode Access (Phone/Email/OTP) |
 | `/auth/kn/social/token/` | `POST` | Federated OAuth Callback |
 | `/auth/kn/role/` | `GET/POST`| RBAC Management |
+| `/auth/kn/password-reset-request/` | `POST`| Trigger Recovery Sequence |
+| `/auth/kn/password-reset-confirm/` | `POST`| Finalize New Identity |
 
 ### **Services (`serviceApp`)**
 | Path | Method | Purpose |
@@ -200,7 +220,22 @@ To bridge the gap between code and infrastructure, we investigate how our optimi
 
 ---
 
-## 🛡️ Epilogue: The Security Log & Ver. 3.0.0
+## 🚀 Chapter VIII: Hyper-Scale Asynchronous Orchestration
+In a system processing millions of events, synchronous processing is a bottleneck. We utilize a **Multi-Queue Celery Architecture** for true parallel execution.
+
+### 7.1 Distributed Worker Topology
+- **`celery-high-priority`**: A dedicated resource pool for latency-sensitive tasks (OTPs, Password Resets).
+- **`celery-default`**: Handles background heavy-lifting (Welcome emails, analytics syncs).
+- **`celery-beat`**: The "Clockwork" of the system, managing scheduled maintenance.
+
+### 7.2 Industrial Configuration Tuning
+- **Broker Pool Management**: `CELERY_BROKER_POOL_LIMIT=100` ensures Redis connection saturation is never reached.
+- **Fail-Safe Processing**: `CELERY_TASK_ACKS_LATE=True` guarantees that no task is lost even during worker failure.
+- **Prefetch Balancing**: `CELERY_WORKER_PREFETCH_MULTIPLIER=4` optimizes the flow of tasks to workers, preventing idle cycles.
+
+---
+
+## 🛡️ Epilogue: The Security Log & Ver. 3.1.0-CELERY-X
 The platform is a living organism, refined through continuous technical refinement.
 
 - **[PROTECTION]**: Atomic Transactions enforced via `select_for_update`.

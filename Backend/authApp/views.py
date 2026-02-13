@@ -157,13 +157,13 @@ class UsernameCheckAPIView(APIView):
                 "available": False,
                 "message": "Username already exists. Try these instead:",
                 "suggestions": suggestions
-            }, status=status.HTTP_200_OK)
+            }, status=status.HTTP_200_OK, headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
 
         return Response({
             "available": True,
             "message": "Username is available!",
             "suggestions": []
-        }, status=status.HTTP_200_OK)
+        }, status=status.HTTP_200_OK, headers={"Cache-Control": "no-store, no-cache, must-revalidate"})
 
 
 
@@ -406,7 +406,7 @@ class VerifyOTPAPIView(APIView):
             otp_record.save(update_fields=["is_used"])
         
         # Async welcome email
-        send_welcome_email.delay(user.email, user.first_name)
+        send_welcome_email.delay(user.email, user.first_name, user.username)
 
         return Response(
             {
@@ -762,8 +762,11 @@ class RoleLoginAPIView(APIView):
         )
 
 
+import logging
+logger = logging.getLogger(__name__)
+
 class RequestPasswordResetAPIView(APIView):
-    """API to request password reset."""
+    """API to request a password reset link."""
 
     permission_classes = [AllowAny]
 
@@ -791,12 +794,28 @@ class RequestPasswordResetAPIView(APIView):
             f"{settings.FRONTEND_URL}/reset-password/?uid={uid}&token={token}"
         )
 
-        # Send email with reset link (async preferred)
-        from authApp.tasks.send_mail_otp import send_password_reset_email
-        send_password_reset_email.delay(email, reset_url)
+        # Send email with reset link
+        try:
+            from authApp.tasks.send_mail_otp import send_password_reset_email
+            # Use delay() for async, but provide logging context
+            logger.info(f"Queuing password reset email for {email}")
+            send_password_reset_email.delay(email, reset_url)
+        except Exception as e:
+            logger.error(f"Failed to queue reset email for {email}: {str(e)}")
+            # Fallback to synchronous for critical link delivery if celery fails
+            try:
+                from authApp.tasks.send_mail_otp import send_password_reset_email
+                send_password_reset_email(email, reset_url)
+                logger.info(f"Synchronous fallback: Sent reset email to {email}")
+            except Exception as se:
+                logger.error(f"Total failure sending reset email to {email}: {str(se)}")
+                return Response(
+                    {"error": "Failed to dispatch reset sequence. Please contact support."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
 
         return Response(
-            {"message": "Password reset link sent to your email."},
+            {"message": "Password reset instructions have been dispatched to your interface."},
             status=status.HTTP_200_OK,
         )
 

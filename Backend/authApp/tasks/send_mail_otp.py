@@ -8,7 +8,7 @@ def update_translations_for_model(translated_text_id, source_lang):
     perform_translation(translated_text_id, source_lang)
 
 
-@shared_task
+@shared_task(queue='high_priority')
 def send_email_otp(email, otp):
     from django.core.mail import EmailMultiAlternatives
     from django.template.loader import render_to_string
@@ -31,16 +31,40 @@ def send_email_otp(email, otp):
 
 
 @shared_task
-def send_welcome_email(email, first_name):
+def send_welcome_email(email, first_name, username=None):
     from django.core.mail import EmailMultiAlternatives
     from django.template.loader import render_to_string
     from django.utils.html import strip_tags
 
     subject = "Access Authorized - Welcome to Stark Industries"
-    context = {'first_name': first_name}
+    context = {
+        'first_name': first_name,
+        'username': username
+    }
     
     # Render HTML and Plain Text
     html_content = render_to_string('emails/welcome.html', context)
+    text_content = strip_tags(html_content)
+    
+    from_email = settings.DEFAULT_FROM_EMAIL
+    recipient_list = [email]
+    
+    msg = EmailMultiAlternatives(subject, text_content, from_email, recipient_list)
+    msg.attach_alternative(html_content, "text/html")
+    msg.send()
+
+
+@shared_task(queue='high_priority')
+def send_password_reset_email(email, reset_url):
+    from django.core.mail import EmailMultiAlternatives
+    from django.template.loader import render_to_string
+    from django.utils.html import strip_tags
+
+    subject = "STARK SECURE - Password Reset Sequence"
+    context = {'reset_url': reset_url}
+    
+    # Render HTML and Plain Text
+    html_content = render_to_string('emails/password_reset.html', context)
     text_content = strip_tags(html_content)
     
     from_email = settings.DEFAULT_FROM_EMAIL
