@@ -105,3 +105,27 @@ class UserRole(Common):
    def __str__(self):
       return f"{self.user.username} → {self.role.name} ({self.status})"
 
+
+class UserOTP(Common):
+    """
+    Stores OTP codes for users to verify signup or login.
+    Using a database model instead of sessions allows cross-device verification
+    and better rate limiting for high-load systems.
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='otps')
+    otp_code = models.CharField(max_length=6)
+    is_used = models.BooleanField(default=False)
+    failed_attempts = models.IntegerField(default=0)
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'expires_at', 'is_used']),
+            models.Index(fields=['user', 'created_at']), # Optimized for rate-limiting queries
+        ]
+        verbose_name = "User OTP"
+        verbose_name_plural = "User OTPs"
+
+    def __str__(self):
+        return f"OTP for {self.user.username} (Expires: {self.expires_at})"
+

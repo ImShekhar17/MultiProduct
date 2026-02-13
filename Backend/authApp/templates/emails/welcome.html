@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 0;
+            background-color: #0a0a0c;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #121217;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            border: 1px solid #1f1f27;
+        }
+
+        .header {
+            background: #000000;
+            color: #ffffff;
+            padding: 40px;
+            text-align: center;
+            border-bottom: 2px solid #00d4ff;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            letter-spacing: 6px;
+            text-transform: uppercase;
+            font-weight: 300;
+        }
+
+        .header span {
+            color: #00d4ff;
+            font-weight: 700;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .welcome-hero {
+            background: #1a1a21;
+            border-radius: 4px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            border: 1px solid #1f1f27;
+            position: relative;
+        }
+
+        .welcome-hero::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 25%;
+            width: 50%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00d4ff, transparent);
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 30px 0;
+        }
+
+        .feature-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #1f1f27;
+            display: flex;
+            align-items: center;
+            color: #bbb;
+        }
+
+        .feature-item strong {
+            color: #00d4ff;
+            margin-right: 5px;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background-color: #00d4ff;
+            color: #000000 !important;
+            text-decoration: none;
+            border-radius: 2px;
+            font-weight: 800;
+            margin-top: 20px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 13px;
+            transition: all 0.3s ease;
+        }
+
+        .footer {
+            background: #08080a;
+            padding: 30px;
+            text-align: center;
+            font-size: 11px;
+            color: #555;
+            border-top: 1px solid #1f1f27;
+            letter-spacing: 1px;
+        }
+
+        .support-card {
+            background: #16161d;
+            border: 1px solid #1f1f27;
+            border-radius: 4px;
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .container {
+                width: 100% !important;
+                margin: 0 !important;
+                border-radius: 0 !important;
+            }
+
+            .content {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>STARK <span>INDUSTRIES</span></h1>
+        </div>
+        <div class="content">
+            <div class="welcome-hero">
+                <h2
+                    style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 300; text-transform: uppercase; letter-spacing: 2px;">
+                    Welcome, <span style="color: #00d4ff;">{{ username|default:first_name }}</span></h2>
+                <p style="margin: 15px 0 0 0; color: #888; letter-spacing: 1px;">CLEARANCE LEVEL: ALPHA-1</p>
+            </div>
+
+            <p>Initiating onboarding sequence. Your credentials have been authorized for Stark Global Systems. You now
+                have access to the most advanced infrastructure on the planet.</p>
+
+            <h3
+                style="color: #00d4ff; margin-top: 40px; font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">
+                System Access Points:</h3>
+            <ul class="feature-list">
+                <li class="feature-item"><span>PROT-01</span> &nbsp; <strong>Secure Terminal:</strong> Unified access
+                    via Stark Auth.</li>
+                <li class="feature-item"><span>PROT-02</span> &nbsp; <strong>JARVIS Integration:</strong> Real-time
+                    financial analytics.</li>
+                <li class="feature-item"><span>PROT-03</span> &nbsp; <strong>Global Net:</strong> 24/7 priority
+                    satellite support.</li>
+            </ul>
+
+            <center>
+                <a href="https://www.stark.com" class="btn">Access Mainframe</a>
+            </center>
+
+            <div class="support-card">
+                <h4
+                    style="margin: 0 0 10px 0; font-size: 11px; text-transform: uppercase; color: #555; letter-spacing: 2px;">
+                    Technical Assistance</h4>
+                <p style="margin: 0; font-size: 13px; color: #888;">
+                    <strong>Jarvis Interface:</strong> jarvis@stark.com<br>
+                    <strong>Facility Code:</strong> +01-MALIBU-STARK
+                </p>
+            </div>
+
+            <p
+                style="font-size: 12px; color: #555; margin-top: 40px; font-style: italic; border-left: 2px solid #333; padding-left: 15px;">
+                "Technology is not just a tool. It's an extension of our capability." — Tony Stark
+            </p>
+        </div>
+        <div class="footer">
+            <p><strong>STARK INDUSTRIES <span>GLOBAL</span></strong><br>
+                Corporate HQ | Malibu, California</p>
+            <hr style="border: none; border-top: 1px solid #1f1f27; margin: 15px 0;">
+            <p>&copy; 2025 STARK INDUSTRIES. ALL RIGHTS RESERVED.</p>
+        </div>
+    </div>
+</body>
+
+</html>

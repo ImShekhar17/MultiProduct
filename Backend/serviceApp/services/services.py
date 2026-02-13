@@ -347,13 +347,13 @@ class InvoiceService:
         plan = invoice.user_subscription.plan
         
         context = {
-            'user_name': user.get_full_name() or user.first_name,
+            'user_name': user.get_full_name or user.first_name,
             'invoice_number': invoice.id,
             'product_name': product.name,
             'plan_name': plan.name,
-            'amount': invoice.amount,
-            'issued_date': invoice.issued_date,
-            'due_date': invoice.due_date,
+            'amount': str(invoice.amount),
+            'issued_date': invoice.issued_date.strftime('%Y-%m-%d'),
+            'due_date': invoice.due_date.strftime('%Y-%m-%d'),
             'transaction_ref': invoice.transaction_ref,
             'is_paid': invoice.is_paid,
             'email_type': email_type,
@@ -370,23 +370,15 @@ class InvoiceService:
             subject = f'Payment Reminder - Invoice {invoice.id}'
             template_name = 'emails/invoice_reminder.html'
         
-        try:
-            html_message = render_to_string(template_name, context)
-            plain_message = strip_tags(html_message)
-            
-            email = EmailMultiAlternatives(
-                subject=subject,
-                body=plain_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[user.email]
-            )
-            email.attach_alternative(html_message, "text/html")
-            email.send()
-            
-            return True
-        except Exception as e:
-            print(f"Error sending invoice email: {str(e)}")
-            return False
+        from ..tasks.tasks import send_email_notification_task
+        send_email_notification_task.delay(
+            subject=subject,
+            template_name=template_name,
+            context=context,
+            recipient_list=[user.email]
+        )
+        
+        return True
 
 
 class PaymentService:
@@ -526,28 +518,21 @@ class NotificationService:
         
         # Send email reminder
         context = {
-            'user_name': user_subscription.user.get_full_name() or user_subscription.user.username,
+            'user_name': user_subscription.user.get_full_name or user_subscription.user.username,
             'product_name': user_subscription.product.name,
             'plan_name': user_subscription.plan.name,
-            'expiry_date': user_subscription.end_date,
+            'expiry_date': user_subscription.end_date.strftime('%Y-%m-%d'),
             'days_until_expiry': days_until_expiry,
             'site_url': settings.SITE_BASE_URL,
         }
         
-        try:
-            html_message = render_to_string('emails/renewal_reminder.html', context)
-            plain_message = strip_tags(html_message)
-            
-            email = EmailMultiAlternatives(
-                subject=f'Subscription Expiring Soon - {user_subscription.product.name}',
-                body=plain_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[user_subscription.user.email]
-            )
-            email.attach_alternative(html_message, "text/html")
-            email.send()
-        except Exception as e:
-            print(f"Error sending renewal reminder email: {str(e)}")
+        from ..tasks.tasks import send_email_notification_task
+        send_email_notification_task.delay(
+            subject=f'Subscription Expiring Soon - {user_subscription.product.name}',
+            template_name='emails/renewal_reminder.html',
+            context=context,
+            recipient_list=[user_subscription.user.email]
+        )
         
         return notification
     
@@ -560,29 +545,23 @@ class NotificationService:
             user: User instance
             transaction: Transaction instance
         """
-        invoices = transaction.invoice_set.all()
+        invoices = Invoice.objects.filter(transaction_ref=transaction.transaction_ref)
         
         context = {
-            'user_name': user.get_full_name() or user.username,
+            'user_name': user.get_full_name or user.username,
             'transaction_ref': transaction.transaction_ref,
-            'total_amount': transaction.total_amount,
+            'total_amount': str(transaction.total_amount),
             'payment_method': transaction.payment_method,
-            'invoices': invoices,
-            'transaction_date': transaction.created_at,
+            'transaction_date': transaction.created_at.strftime('%Y-%m-%d %H:%M:%S'),
             'site_url': settings.SITE_BASE_URL,
+            # Note: invoices are handled in the task or passed as IDs if needed
+            'invoice_ids': list(invoices.values_list('id', flat=True))
         }
         
-        try:
-            html_message = render_to_string('emails/payment_confirmation.html', context)
-            plain_message = strip_tags(html_message)
-            
-            email = EmailMultiAlternatives(
-                subject=f'Payment Confirmation - {transaction.transaction_ref}',
-                body=plain_message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[user.email]
-            )
-            email.attach_alternative(html_message, "text/html")
-            email.send()
-        except Exception as e:
-            print(f"Error sending payment confirmation email: {str(e)}")
+        from ..tasks.tasks import send_email_notification_task
+        send_email_notification_task.delay(
+            subject=f'Payment Confirmation - {transaction.transaction_ref}',
+            template_name='emails/payment_confirmation.html',
+            context=context,
+            recipient_list=[user.email]
+        )

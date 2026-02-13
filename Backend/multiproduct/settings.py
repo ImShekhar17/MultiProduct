@@ -97,13 +97,16 @@ AUTHENTICATION_BACKENDS = (
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
 
 # GOOGLE OAUTH SETTINGS
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = "YOUR_GOOGLE_CLIENT_ID"
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = "YOUR_GOOGLE_CLIENT_SECRET"
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv("GOOGLE_CLIENT_ID", "YOUR_GOOGLE_CLIENT_ID")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "YOUR_GOOGLE_CLIENT_SECRET")
 SOCIAL_AUTH_GOOGLE_OAUTH2_SCOPE = ['email', 'profile']
 
 # FACEBOOK SETTINGS
-SOCIAL_AUTH_FACEBOOK_KEY = "YOUR_FACEBOOK_APP_ID"
-SOCIAL_AUTH_FACEBOOK_SECRET = "YOUR_FACEBOOK_APP_SECRET"
+FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID", "YOUR_FACEBOOK_APP_ID")
+FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET", "YOUR_FACEBOOK_APP_SECRET")
+
+SOCIAL_AUTH_FACEBOOK_KEY = FACEBOOK_APP_ID
+SOCIAL_AUTH_FACEBOOK_SECRET = FACEBOOK_APP_SECRET
 SOCIAL_AUTH_FACEBOOK_SCOPE = ['email']
 SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
     'fields': 'id, name, email'
@@ -193,12 +196,35 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
 
+# HYPER-SCALE OPTIMIZATIONS (1,000,000+ requests)
+CELERY_BROKER_POOL_LIMIT = int(os.getenv("CELERY_POOL_LIMIT", 100)) # Minimize connection overhead
+CELERY_TASK_ACKS_LATE = True # Ensure reliability at scale
+CELERY_WORKER_PREFETCH_MULTIPLIER = int(os.getenv("CELERY_PREFETCH", 4)) # Optimized for fast tasks
+CELERY_WORKER_CONCURRENCY = int(os.getenv("CELERY_CONCURRENCY", 8)) # Based on CPU/IO
+
+# TASK ROUTING (Isolation for zero-latency)
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+CELERY_TASK_QUEUES = {
+    'default': {
+        'exchange': 'default',
+        'routing_key': 'default',
+    },
+    'high_priority': {
+        'exchange': 'high_priority',
+        'routing_key': 'high_priority',
+    },
+}
+
 #cronjobs for notification
 CELERY_BEAT_SCHEDULE = {
     "update": {
         "task": "authApp.scheduler.notification.send_notification",
         "schedule": timedelta(hours=5),
         "args": (12,),
+    },
+    "cleanup_otps": {
+        "task": "authApp.tasks.send_mail_otp.cleanup_expired_otps",
+        "schedule": crontab(minute=0, hour='*'),  # Run every hour
     },
 }
 
@@ -234,6 +260,7 @@ REST_FRAMEWORK = {
     "DEFAULT_THROTTLE_RATES": {
         "anon": os.getenv("DRF_THROTTLE_ANON", "100/day"),
         "user": os.getenv("DRF_THROTTLE_USER", "1000/day"),
+        "username_check": os.getenv("DRF_THROTTLE_USERNAME_CHECK", "100/minute"),
     },
 }
 
@@ -280,6 +307,7 @@ LOGGING = {
 
 # FEATURE FLAGS
 
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 SITE_BASE_URL = os.getenv("SITE_BASE_URL", "http://localhost:8000")
 ENABLE_RAZORPAY = os.getenv("ENABLE_RAZORPAY", "False") in ("True", "true", "1")
 

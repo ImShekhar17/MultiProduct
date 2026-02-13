@@ -20,8 +20,6 @@ services:
     depends_on:
       - db
       - redis
-    networks:
-      - multiproduct_network
     restart: always
 
   db:
@@ -40,24 +38,20 @@ services:
       - multiproduct_db_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
-    networks:
-      - multiproduct_network
   redis:
     image: redis:7-alpine
     container_name: redis
     command: ["redis-server"]
     ports:
-      - "6379:6379"
+      - "6380:6379"
     volumes:
       - redis_data:/data
     restart: always
-    networks:
-      - multiproduct_network
 
-  celery:
+  celery-default:
     build: .
-    container_name: multiproduct-celery
-    command: ["./wait-for-redis.sh", "redis", "celery", "-A", "multiproduct", "worker", "-l", "info"]
+    container_name: multiproduct-celery-default
+    command: ["./wait-for-redis.sh", "redis", "celery", "-A", "multiproduct", "worker", "-Q", "default", "-l", "info", "--concurrency=4"]
     volumes:
       - .:/usr/src/app
     working_dir: /usr/src/app
@@ -66,8 +60,19 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    networks:
-      - multiproduct_network
+
+  celery-high-priority:
+    build: .
+    container_name: multiproduct-celery-high
+    command: ["./wait-for-redis.sh", "redis", "celery", "-A", "multiproduct", "worker", "-Q", "high_priority", "-l", "info", "--concurrency=8"]
+    volumes:
+      - .:/usr/src/app
+    working_dir: /usr/src/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   celery-beat:
     build: .
@@ -81,12 +86,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    networks:
-      - multiproduct_network  
 
-networks:
-  multiproduct_network:
-    driver: bridge
 
 volumes:
   multiproduct_db_data:

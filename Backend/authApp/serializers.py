@@ -61,8 +61,7 @@ class SignupSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ["username", "email", "password", "confirm_password", "phone_number",
-                  "first_name", "last_name", 'date_of_birth', 'gender', 'address']
+        fields = ["username", "email", "password", "confirm_password", "phone_number"]
         extra_kwargs = {"password": {"write_only": True}}
 
     def validate(self, data):
@@ -77,27 +76,61 @@ class SignupSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         """Creates a user and securely sets the password"""
-        validated_data.pop("confirm_password")
+        validated_data.pop("confirm_password", None)
         user = User(
-            username=validated_data["username"],
-            email=validated_data["email"],
-            phone_number=validated_data["phone_number"],
-            first_name=validated_data["first_name"],
-            last_name=validated_data["last_name"],
-            gender=validated_data["gender"],
-            address=validated_data["address"],
-            date_of_birth=validated_data["date_of_birth"],
+            username=validated_data.get("username"),
+            email=validated_data.get("email"),
+            phone_number=validated_data.get("phone_number"),
             is_active=False  # User is inactive until OTP is verified
         )
-        user.set_password(validated_data["password"])  # Securely set password
+        user.set_password(validated_data.get("password"))  # Securely set password
         user.save()
         return user
 
 
-class ResetPasswordSerializer(serializers.ModelSerializer):
+class ResetPasswordSerializer(serializers.Serializer):
+    """
+    Serializer for handling password reset confirmation.
+    Includes validation to ensure encryption sequences match.
+    """
+    new_password = serializers.CharField(write_only=True, required=True, min_length=8)
+    confirm_password = serializers.CharField(write_only=True, required=True)
+
+    def validate(self, data):
+        if data['new_password'] != data['confirm_password']:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+        return data
+
+
+class LoginSerializer(serializers.Serializer):
+    """
+    Handles input validation for multiple login methods.
+    Optimized for high load by performing basic validation before DB hits.
+    """
+    email = serializers.EmailField(required=False)
+    phone_number = serializers.CharField(required=False)
+    password = serializers.CharField(required=False)
+    otp = serializers.CharField(required=False, max_length=6)
+
+    def validate(self, attrs):
+        email = attrs.get('email')
+        phone_number = attrs.get('phone_number')
+        password = attrs.get('password')
+        otp = attrs.get('otp')
+
+        if not (email or phone_number):
+            raise serializers.ValidationError({"error": "Either email or phone number is required."})
+
+        if not (password or otp):
+            raise serializers.ValidationError({"error": "Either password or OTP is required."})
+
+        return attrs
+
+
+class UserOTPSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
-        fields = '__all__'
+        model = UserOTP
+        fields = ['otp_code', 'expires_at']
 
     # def validate_base_price(self, data):
     #     if 'base_price' in data and not data['base_price'] >= 0:
